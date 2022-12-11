@@ -164,7 +164,7 @@ const MyArr = Arr<number>(i32, 10);
 
 ### Collections
 ```typescript
-const { Vec, Map, Set } = RustType;
+const { Vec, HashMap, HashSet } = RustType;
 
 // it implements Type<Array<number>>
 const MyVec = Vec<number>(i32);

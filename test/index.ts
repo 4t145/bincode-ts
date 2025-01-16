@@ -60,7 +60,7 @@ let myEnumData2 = enumData<MyEnum.$, MyEnum.Empty>(
 
 const bincode0 = encoder.init().encodeAs([myEnumData0, myEnumData1, myEnumData2, myEnumData0], Vec(MyEnum.Type));
 console.log(bincode0);
-const result = decoder.load(bincode0.buffer).decodeAs(Vec(MyEnum.Type));
+const result = decoder.load(bincode0).decodeAs(Vec(MyEnum.Type));
 console.log(result)
 const myType = Result(i32, myStruct);
 const myData = Err<MyStruct>({
@@ -69,7 +69,7 @@ const myData = Err<MyStruct>({
 });
 const bincode1 = encoder.init().encodeAs(myData, myType);
 console.log(bincode1);
-const result1 = decoder.load(bincode1.buffer).decodeAs(myType);
+const result1 = decoder.load(bincode1).decodeAs(myType);
 console.log(result1);
 
 const array = Arr(myStruct, 3);
@@ -91,5 +91,5 @@ const bincode2 = encoder.init().encodeAs(
   array
 );
 console.log(bincode2);
-const result3 = decoder.load(bincode2.buffer).decodeAs(array);
+const result3 = decoder.load(bincode2).decodeAs(array);
 console.log(result3);

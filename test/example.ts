@@ -28,5 +28,5 @@ console.log('bincode is', bincode.buffer)
 
 // decode
 const decoder = new Decoder()
-const decodedData = decoder.load(bincode.buffer).decodeAs(MyStrcut)
+const decodedData = decoder.load(bincode).decodeAs(MyStrcut)
 console.log('decoded object is', decodedData)

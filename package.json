@@ -4,12 +4,20 @@
   "description": "a lib to encode/decode bincode",
   "main": "./src/index.ts",
   "scripts": {
-    "test": "node-ts ./test/index.ts"
+    "test": "vitest"
   },
-  "keywords": ["bincode", "rust", "serde"],
+  "keywords": [
+    "bincode",
+    "rust",
+    "serde"
+  ],
   "author": "4t145",
   "license": "ISC",
   "dependencies": {
     "typescript": "^4.9.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "vitest": "^2.1.8"
   }
 }

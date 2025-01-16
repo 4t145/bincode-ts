@@ -1,0 +1,19 @@
+name: Unit tests
+on:
+  push:
+  pull_request:
+
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Test
+        run: npm install && npm run test

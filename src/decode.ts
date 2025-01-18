@@ -2,7 +2,7 @@ import { Type } from "./rust-type";
 import { Config } from "./config";
 
 export class Decoder {
-  buffer: ArrayBuffer = new ArrayBuffer(0);
+  buffer: Uint8Array = new Uint8Array(0);
   cursor: number = 0;
   config: Config = new Config();
   constructor(config?: Config) {
@@ -11,11 +11,9 @@ export class Decoder {
     }
   }
 
-  load(buffer: ArrayBuffer): this {
+  load(buffer: Uint8Array): this {
     this.cursor = 0;
-    if (buffer instanceof ArrayBuffer) {
-      this.buffer = buffer;
-    }
+    this.buffer = buffer;
     return this;
   }
 
@@ -25,7 +23,7 @@ export class Decoder {
 
   read(size: number): DataView {
     const nextCursor = this.cursor + size;
-    const view = new DataView(this.buffer, this.cursor, size);
+    const view = new DataView(this.buffer.buffer, this.cursor, size);
     this.cursor = nextCursor;
     return view;
   }

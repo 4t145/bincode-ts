@@ -29,12 +29,13 @@ export type TupleLayout = {
     [SYMBOL_LAYOUT]: 'tuple'
 }
 export type TupleType = RustType[] & TupleLayout
-
-export type ArrayType = {
+export type ArrayLayout = {
     [SYMBOL_LAYOUT]: 'array'
+}
+export type ArrayType = {
     type: RustType
     length: number
-}
+} & ArrayLayout
 
 export type EnumVariantKind = UnitType | TupleType | StructType
 
@@ -74,6 +75,10 @@ export function variant(variant: number, kind?: EnumVariantKind): EnumVariant {
     return { variant, kind: kind ?? 'unit' }
 }
 
+export type Array<T extends RustType, N extends number> = {
+    type: T
+    length: N
+} & ArrayLayout
 export function array(type: RustType, length: number): ArrayType {
     return { [SYMBOL_LAYOUT]: 'array', type, length }
 }
@@ -127,22 +132,35 @@ export type EnumValue<T extends EnumType> = {
         value: RustValue<T[K]>
     } : never
 }[keyof T] & SlicePart
-type TupleValue<T> = {
-    [K in keyof T]: K extends number ? T[K] extends RustType ? {
-        variant: K
-        value: RustValue<T[K]>
-    } : never : never
-} & SlicePart
+
+
+type DeTupleLayout<T> = T extends (infer U & TupleLayout) ? U : T;
+type MapTupleValue<T extends unknown[]> = T extends
+    [infer U, ...infer R] ? U extends RustType ? [RustValue<U>, ...MapTupleValue<R>] : never :
+    T extends [] ? [] : never
+
+export type TupleValue<T extends TupleType> = MapTupleValue<DeTupleLayout<T>> & SlicePart
 
 export type PrimitiveValue<T extends PrimitiveType> = {
-    type: PrimitiveType,
+    type: T,
 } & SlicePart
+
+export type collectionValue<T extends CollectionType> = RustValue<T['type']>[] & SlicePart
+
+
+export type ArrayValue<T extends ArrayType> = RustValue<T['type']>[] & {
+    length: T['length']
+} & SlicePart
+
 export type RustValue<T extends RustType> =
     T extends StructType ? StructValue<T> :
     T extends EnumType ? EnumValue<T> :
     T extends TupleType ? TupleValue<T> :
+    T extends ArrayType ? ArrayValue<T> :
+    T extends CollectionType ? collectionValue<T> :
     T extends PrimitiveType ? PrimitiveValue<T> :
     never
 
 type X = RustValue<OptionType<'u64'>>;
-type Y = TupleValue<['u64']>;
+type Y = RustValue<Tuple<['u64']>>;
+type Z = RustValue<Array<'u64', 3>>;

@@ -8,12 +8,12 @@ export type PrimitiveTypeMarker = `u${IntBitSize}` | `i${IntBitSize}` | `f${Floa
 // product type: struct, tuple, array
 // collection type: vec, set, map, ...etc
 
-export type LayoutType = 'array' | 'sum' | 'product' | 'collection' | 'primitive'
+export type LayoutType = 'array' | 'sum' | 'product' | 'collection' | 'primitive' | 'unit'
 export const SYMBOL_LAYOUT: unique symbol = Symbol('layout')
 export type LayoutMarker<T extends LayoutType> = {
     [SYMBOL_LAYOUT]: T
 }
-export type Layout = SumLayout | ProductLayout | PrimitiveLayout
+export type Layout = SumLayout | ProductLayout | PrimitiveLayout | UnitLayout
 
 export type SumLayout = {
     [key: number]: Layout
@@ -26,6 +26,7 @@ export type ArrayLayout = {
 } & LayoutMarker<'array'>
 export type CollectionLayout = Layout & LayoutMarker<'collection'>
 export type PrimitiveLayout = PrimitiveTypeMarker & LayoutMarker<'primitive'>
+export type UnitLayout = LayoutMarker<'unit'>
 
 
 export type View<L extends Layout> = {
@@ -199,6 +200,23 @@ export const Set = Collection
 export const Map = <K extends RustType, V extends RustType>(K: K, V: V): Collection<Tuple<[K, V]>> => (Collection(Tuple(K, V)))
 export const Bytes = Collection(u8)
 
+
+/* 
+    RustType To Layout
+*/
+
+type RustLayout<T extends RustType> = 
+    T extends Unit ? UnitLayout :
+    T extends TypeKindMarker<infer P extends PrimitiveTypeMarker> ? LayoutMarker<'primitive'> & P :
+    T extends StructType ? ProductLayout :
+    T extends TupleType ? ProductLayout :
+    T extends EnumType ? SumLayout :
+    T extends ArrayType ? ArrayLayout :
+    T extends CollectionType ? CollectionLayout :
+    never
+
+
+
 type JsonTupleValue<T extends RustType[]> = 
     T extends [infer First, ...infer Tail] ? 
         First extends RustType ? 
@@ -249,6 +267,8 @@ export type JsonType<T extends RustType> =
     T extends CollectionType ? JsonType<T['element']>[] :
     T extends ArrayType ? JsonType<T['element']>[] & { length: T['size'] } :
 never
+
+
 
 
 const Sex = Enum({

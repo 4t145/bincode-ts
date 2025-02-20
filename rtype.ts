@@ -1,6 +1,17 @@
 type IntBitSize = 8 | 16 | 32 | 64 | 128 | 'size'
 type FloatBitSize = 16 | 32 | 64
 
+// layout: 1. primitive 2. sum type, 3. product type, 4. collection type
+// primitive type: u8, i8, u16, i16, u32, i32, u64, i64, f32, f64, bool, String
+// sum type: enum
+// product type: struct, tuple, array
+// collection type: vec, set, map, ...etc
+
+export type Layout = 'sum' | 'product' | 'collection'
+
+
+
+
 export type RustType = PrimitiveType | StructType | TupleType | ArrayType | EnumType | CollectionType | UnitType
 export type UnitType = 'unit'
 export type PrimitiveType = `u${IntBitSize}` | `i${IntBitSize}` | `f${FloatBitSize}` | 'bool' | 'String'
@@ -8,7 +19,6 @@ export type PrimitiveType = `u${IntBitSize}` | `i${IntBitSize}` | `f${FloatBitSi
 export const SYMBOL_LAYOUT: unique symbol = Symbol('layout')
 export const SYMBOL_SLICE: unique symbol = Symbol('slice')
 
-export type Layout = 'collection' | 'struct' | 'tuple' | 'array' | 'enum'
 export type EnumLayout = {
     [SYMBOL_LAYOUT]: 'enum'
 }

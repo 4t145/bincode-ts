@@ -37,14 +37,14 @@ export type View<L extends Layout> = {
 
 export type UnitTypeMarker = 'unit'
 export type RustType = TypeKindMarker<UnitTypeMarker> | TypeKindMarker<PrimitiveTypeMarker> | TupleType | ArrayType | StructType | EnumType | CollectionType;
-export const SYMBOL_TYPE_KIND: unique symbol = Symbol('type-kind')
+export const TYPE_KIND: unique symbol = Symbol('type-kind')
 export type TypeKind = UnitTypeMarker | PrimitiveTypeMarker | 'struct' | 'enum' | 'tuple' | 'array' | 'collection'
 export type TypeKindMarker<T extends TypeKind> = {
-    [SYMBOL_TYPE_KIND]: T
+    [TYPE_KIND]: T
 }
 
 export const TypeKindMarker = <T extends TypeKind>(type: T): TypeKindMarker<T> => ({
-    [SYMBOL_TYPE_KIND]: type
+    [TYPE_KIND]: type
 })
 
 /* 
@@ -100,7 +100,7 @@ export const SYMBOL_EXPR: unique symbol = Symbol('expr')
 export type Expr<N extends number> = {
     [SYMBOL_EXPR]: N
 }
-export type EnumVariant = (EnumVariantType) & Expr<number>
+export type EnumVariant<E extends number = number, T extends EnumVariantType = EnumVariantType> = (T) & Expr<E>
 
 export const expr: {
     <N extends number, T extends EnumVariantType>(expr: N, type: T): T & Expr<N>
@@ -156,7 +156,7 @@ export type Tuple<T extends RustType[]> = T & TypeKindMarker<'tuple'>
 
 export const Tuple = <T extends RustType[]>(...element: T): Tuple<T> => {
     const elementAsTuple = element as Tuple<T>;
-    elementAsTuple[SYMBOL_TYPE_KIND] = 'tuple'
+    elementAsTuple[TYPE_KIND] = 'tuple'
     return elementAsTuple
 }
 export type Enum<T extends {
@@ -168,7 +168,7 @@ export const Enum = <T extends {
     [variant: string]: EnumVariant
 }>(variants: T): Enum<T> => {
     const asEnum = variants as Enum<T>;
-    asEnum[SYMBOL_TYPE_KIND] = 'enum'
+    asEnum[TYPE_KIND] = 'enum'
     return asEnum
 }
 
@@ -180,17 +180,26 @@ export const Struct = <T extends {
     [variant: string]: RustType
 }>(fields: T): Struct<T> => {
     const elementAsStruct = fields as Struct<T>;
-    elementAsStruct[SYMBOL_TYPE_KIND] = 'struct'
+    elementAsStruct[TYPE_KIND] = 'struct'
     return elementAsStruct
 }
 
+export type Result<T extends RustType, E extends RustType> = Enum<{
+    Ok: EnumVariant<0, Tuple<[T]>>,
+    Err: EnumVariant<1, Tuple<[E]>>,
+}>
 
-export const Result = <T extends RustType, E extends RustType>(ok: T, err: E) => Enum({
+export const Result = <T extends RustType, E extends RustType>(ok: T, err: E): Result<T, E> => Enum({
     Ok: _(0, Tuple(ok)),
     Err: _(1, Tuple(err))
 })
 
-export const Option = <T extends RustType>(value: T) => Enum({
+export type Option<T extends RustType> = Enum<{
+    Some: EnumVariant<0, Tuple<[T]>>,
+    None: EnumVariant<1, Unit>,
+}>
+
+export const Option = <T extends RustType>(value: T): Option<T> => Enum({
     Some: _(0, Tuple(value)),
     None: _(1)
 })
@@ -205,7 +214,7 @@ export const Bytes = Collection(u8)
     RustType To Layout
 */
 
-type RustLayout<T extends RustType> = 
+type RustLayout<T extends RustType> =
     T extends Unit ? UnitLayout :
     T extends TypeKindMarker<infer P extends PrimitiveTypeMarker> ? LayoutMarker<'primitive'> & P :
     T extends StructType ? ProductLayout :
@@ -217,77 +226,64 @@ type RustLayout<T extends RustType> =
 
 
 
-type JsonTupleValue<T extends RustType[]> = 
-    T extends [infer First, ...infer Tail] ? 
-        First extends RustType ? 
-            Tail extends RustType[]?
-                [JsonType<First>, ...JsonTupleValue<Tail>] : 
-            never :
-        never : 
-    T extends [infer First] ? 
-        First extends RustType ? 
-            [JsonType<First>] : 
-        never : 
+type TupleValue<T extends RustType[]> =
+    T extends [infer First, ...infer Tail] ?
+    First extends RustType ?
+    Tail extends RustType[] ?
+    [Value<First>, ...TupleValue<Tail>] :
+    never :
+    never :
+    T extends [infer First] ?
+    First extends RustType ?
+    [Value<First>] :
+    never :
     never
 
-type JsonEnumValue<T extends EnumType> = UnionToVariant<JsonEnumValueUnion<T>>
+type EnumValue<T extends EnumType> = UnionToVariant<EnumValueUnion<T>>
 
-type JsonEnumValueUnion<T extends EnumType> = {
-    [K in Extract<(keyof T), string>]: JsonType<T[K]>
+type EnumValueUnion<T extends EnumType> = {
+    [K in Extract<(keyof T), string>]: Value<T[K]>
 }
 
 type UnionToVariant<T extends {
     [variant: string]: any
-}> =  {
-    [K in keyof T]: JsonEnumVariantType<K, T[K]>;
+}> = {
+    [K in keyof T]: EnumVariantValue<K, T[K]>;
 }[keyof T];
 
-export const SYMBOL_VARIANT_KIND: unique symbol = Symbol('variant-kind')
+export const VARIANT: unique symbol = Symbol('variant')
 export type JsonEnumVariant<K> = {
-    [SYMBOL_VARIANT_KIND]: K
+    [VARIANT]: K
 }
-export type JsonEnumVariantType<K, V> =  V & JsonEnumVariant<K>
-
-export type JsonType<T extends RustType> =
+export type EnumVariantValue<K, V> = V & JsonEnumVariant<K>
+export const EnumVariantValue = <K, V>(variant: K, value: V): EnumVariantValue<K, V> => {
+    let asJsonEnumVariant = value as EnumVariantValue<K, V>;
+    asJsonEnumVariant[VARIANT] = variant;
+    return asJsonEnumVariant
+}
+export const $ = EnumVariantValue;
+export type Value<T extends RustType> =
     T extends Unit ? {} :
     T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${16 | 32 | 64}`> ? number :
     T extends TypeKindMarker<`${'u' | 'i'}${64}`> ? bigint :
     T extends TypeKindMarker<'bool'> ? boolean :
     T extends TypeKindMarker<'String'> ? string :
     T extends StructType ? {
-        [K in (Extract<keyof T, string>)]: JsonType<T[K]>
+        [K in (Extract<keyof T, string>)]: Value<T[K]>
     } :
     T extends TupleType ?
-        T extends [infer First] ? 
-            First extends RustType ? 
-                JsonType<First> : 
-            never : 
-        JsonTupleValue<T> :
-    T extends EnumType ? JsonEnumValue<T>:
-    T extends CollectionType ? JsonType<T['element']>[] :
-    T extends ArrayType ? JsonType<T['element']>[] & { length: T['size'] } :
-never
+    T extends [infer First] ?
+    First extends RustType ?
+    Value<First> :
+    never :
+    TupleValue<T> :
+    T extends EnumType ? EnumValue<T> :
+    T extends CollectionType ? Value<T['element']>[] :
+    T extends ArrayType ? Value<T['element']>[] & { length: T['size'] } :
+    never
 
 
-
-
-const Sex = Enum({
-    Male: _(0),
-    Female: _(1),
-    Other: _(2, Tuple(String))
-})
-const Id = Array(u8, 16);
-
-const User = Struct({
-    age: u32,
-    sex: Sex,
-    accounts: Set(Id),
-})
-
-type UserInJson = JsonType<typeof User>;
-
-
-
+const ResultInJson: Value<Result<u32, String>> = $("Ok", 10);
 // export type StructValue<T extends StructType> = {
 //     [K in Exclude<keyof T, typeof SYMBOL_LAYOUT>]: T[K] extends RustType ? RustValue<T[K]> : never
 // } & SlicePart

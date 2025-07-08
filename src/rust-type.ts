@@ -23,21 +23,21 @@ export const bool: Type<boolean> = {
 
 export const i8: Type<number> = {
   decode: (decoder: Decoder): number => {
-    const result = decoder.read(1).getUint8(0);
-    return result;
-  },
-  encode: (data: number, encoder: Encoder): void => {
-    encoder.write(1).setUint8(0, data);
-  },
-};
-
-export const u8: Type<number> = {
-  decode: (decoder: Decoder): number => {
     const result = decoder.read(1).getInt8(0);
     return result;
   },
   encode: (data: number, encoder: Encoder): void => {
     encoder.write(1).setInt8(0, data);
+  },
+};
+
+export const u8: Type<number> = {
+  decode: (decoder: Decoder): number => {
+    const result = decoder.read(1).getUint8(0);
+    return result;
+  },
+  encode: (data: number, encoder: Encoder): void => {
+    encoder.write(1).setUint8(0, data);
   },
 };
 

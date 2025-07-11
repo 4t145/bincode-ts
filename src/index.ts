@@ -271,6 +271,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
     switch (type[TYPE_KIND]) {
         case "unit":
             value = {} as Value<T>
+            break
         case "u8":
             value = view.getUint8(offset) as Value<T>
             offset += 1;
@@ -346,6 +347,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 }
                 value = collection as Value<T>
             }
+            break
         case "tuple":
             {
                 const tupleDefinition = type as TupleType;
@@ -409,7 +411,9 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 function indexed(e: EnumType): {
                     [index: number]: [Type, string]
                 } {
-                    const indexedDefinition = {}
+                    const indexedDefinition = {} as {
+                        [index: number]: [Type, string]
+                    }
                     for (const variant in e) {
                         if (typeof variant === 'string') {
                             const variantType = e[variant]
@@ -588,20 +592,20 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
     return offset
 }
 
-let buffer = new ArrayBuffer(64);
-const MyStruct = Struct({
-    "hello": String,
-    "world": u8
-})
-const MyTuple = Tuple(MyStruct, MyStruct)
-const size = encode(MyTuple, [{
-    hello: "some string",
-    world: 16
-}, {
-    hello: "some string",
-    world: 16
-}], buffer);
-let encoded = buffer.slice(0, size);
-console.log(encoded);
-const decoded = decode(MyTuple, encoded).value;
-console.log(decoded);
+// let buffer = new ArrayBuffer(64);
+// const MyStruct = Struct({
+//     "hello": String,
+//     "world": u8
+// })
+// const MyTuple = Tuple(MyStruct, MyStruct)
+// const size = encode(MyTuple, [{
+//     hello: "some string",
+//     world: 16
+// }, {
+//     hello: "some string",
+//     world: 16
+// }], buffer);
+// let encoded = buffer.slice(0, size);
+// console.log(encoded);
+// const decoded = decode(MyTuple, encoded).value;
+// console.log(decoded);

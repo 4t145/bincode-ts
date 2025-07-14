@@ -3,9 +3,18 @@ type FloatBitSize = 16 | 32 | 64 | 128
 export type PrimitiveTypeMarker = `u${IntBitSize}` | `i${IntBitSize}` | `f${FloatBitSize}` | 'bool' | 'String'
 
 export type UnitTypeMarker = 'unit'
-export type Type = TypeKindMarker<UnitTypeMarker> | TypeKindMarker<PrimitiveTypeMarker> | TupleType | ArrayType | StructType | EnumType | CollectionType;
+export type CustomType<Value, TypeName extends string> = {
+    [TYPE_KIND]: 'custom',
+    type: TypeName,
+    encode(buffer: ArrayBuffer, value: Value, offset: number, config: BincodeConfig): number,
+    decode(buffer: ArrayBuffer, offset: number, config: BincodeConfig): {
+        value: Value,
+        offset: number
+    }
+}
+export type Type = TypeKindMarker<UnitTypeMarker> | TypeKindMarker<PrimitiveTypeMarker> | TupleType | ArrayType | StructType | EnumType | CollectionType | CustomType<unknown, string>;
 export const TYPE_KIND: unique symbol = Symbol('type-kind')
-export type TypeKind = UnitTypeMarker | PrimitiveTypeMarker | 'struct' | 'enum' | 'tuple' | 'array' | 'collection'
+export type TypeKind = UnitTypeMarker | PrimitiveTypeMarker | 'struct' | 'enum' | 'tuple' | 'array' | 'collection' | 'custom'
 export type TypeKindMarker<T extends TypeKind> = {
     [TYPE_KIND]: T
 }
@@ -251,6 +260,7 @@ export type Value<T extends Type> =
     TupleValue<Many> :
     never :
     never :
+    T extends CustomType<infer V, any> ? V :
     never
 
 type BincodeConfig = {
@@ -433,6 +443,14 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 value = EnumVariantValue(variant, variantValue) as Value<T>
             }
             break
+        case "custom":
+            {
+                const customType = type as CustomType<unknown, string>;
+                const { value: customValue, offset: customOffset } = customType.decode(buffer, offset, config);
+                value = customValue as Value<T>;
+                offset = customOffset;
+            }
+            break
     }
     return {
         value,
@@ -584,6 +602,20 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
             }
             break
         }
+        case "custom": {
+            const customType = type as CustomType<unknown, string>;
+            offset = customType.encode(buffer, value, offset, config);
+            break
+        }
     }
     return offset
+}
+
+
+export abstract class CustomTypeClass<V, S extends string> implements CustomType<V, S> {
+    readonly [TYPE_KIND]: 'custom' = 'custom';
+    readonly abstract type: S;
+
+    abstract encode(buffer: ArrayBuffer, value: V, offset: number, config: BincodeConfig): number;
+    abstract decode(buffer: ArrayBuffer, offset: number, config: BincodeConfig): { value: V, offset: number };
 }

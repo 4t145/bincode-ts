@@ -1,5 +1,5 @@
 {
-  "name": "rtype",
+  "name": "bincode-ts",
   "version": "1.0.0",
   "description": "A TypeScript library for binary serialization and deserialization with type safety",
   "main": "dist/cjs/index.js",
@@ -29,6 +29,14 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "dev": "ts-node src/index.ts",
+    "examples": "ts-node examples/index.ts",
+    "examples:basic": "ts-node examples/basic-types.ts",
+    "examples:structs": "ts-node examples/structs.ts",
+    "examples:tuples": "ts-node examples/tuples.ts",
+    "examples:collections": "ts-node examples/collections.ts",
+    "examples:enums": "ts-node examples/enums.ts",
+    "examples:complex": "ts-node examples/complex-structures.ts",
+    "examples:custom": "ts-node examples/custom-types.ts",
     "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [

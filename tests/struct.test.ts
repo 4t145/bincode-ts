@@ -2,7 +2,7 @@ import {
   u8, u16, u32, String as RString, bool, f32,
   Struct, Tuple, Array, Collection,
   encode, decode
-} from '../src/index';
+} from '../src/index.ts';
 
 describe('Composite Types', () => {
   describe('Struct', () => {

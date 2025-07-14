@@ -1,0 +1,131 @@
+# Bincode-TS Examples
+
+This directory contains comprehensive examples demonstrating how to use the bincode-ts library for binary serialization and deserialization with various data types.
+
+## 📁 File Structure
+
+- **`basic-types.ts`** - Basic primitive types (u8, u32, String, bool, f32)
+- **`structs.ts`** - Struct definitions and nested structures
+- **`tuples.ts`** - Tuple types (single-element, mixed types, coordinates)
+- **`collections.ts`** - Collections and arrays (Collection, Array)
+- **`enums.ts`** - Enum types (Option, Result, nested enums)
+- **`complex-structures.ts`** - Complex nested structures for real-world scenarios
+- **`custom-types.ts`** - Custom type definitions and serialization logic
+- **`index.ts`** - Entry point to run all examples
+
+## 🚀 Running Examples
+
+### Run All Examples
+```bash
+# From project root
+npm run examples
+
+# Or using ts-node directly
+npx ts-node examples/index.ts
+```
+
+### Run Specific Examples
+```bash
+# Basic types
+npm run examples:basic
+
+# Structs
+npm run examples:structs
+
+# Tuples
+npm run examples:tuples
+
+# Collections
+npm run examples:collections
+
+# Enums
+npm run examples:enums
+
+# Complex structures
+npm run examples:complex
+
+# Custom types
+npm run examples:custom
+```
+
+## 📖 Example Descriptions
+
+### 1. Basic Types (basic-types.ts)
+Demonstrates encoding and decoding of primitive data types:
+- Strings (String)
+- Integers (u8, u32, i32, u64)
+- Booleans (bool)
+- Floating point numbers (f32, f64)
+
+### 2. Structs (structs.ts)
+Shows how to define and use structs:
+- Simple structs
+- Nested structs
+- Complex field combinations
+
+### 3. Tuples (tuples.ts)
+Demonstrates various tuple usage patterns:
+- 3D coordinates
+- Mixed type tuples
+- Single-element tuples
+
+### 4. Collections (collections.ts)
+Shows collections and arrays usage:
+- Dynamic size collections (Collection)
+- Fixed size arrays (Array)
+- Struct collections
+- Empty collection handling
+
+### 5. Enums (enums.ts)
+Demonstrates enum type usage:
+- Option type (Some/None)
+- Result type (Ok/Err)
+- Nested enums
+
+### 6. Complex Structures (complex-structures.ts)
+Shows complex real-world application scenarios:
+- User information systems
+- Product management systems
+- Deep nested structures
+
+### 7. Custom Types (custom-types.ts)
+Demonstrates how to create and use custom types:
+- **Date Type**: Serializes JavaScript Date objects as Unix timestamps
+- **UUID Type**: Efficient 16-byte UUID storage
+- **Complex Number Type**: Mathematical complex numbers with real/imaginary parts
+- **Color Type**: Compact RGB color representation
+- **Versioned Data**: Forward-compatible data structures with versioning
+- **Composite Usage**: Using custom types within structs and collections
+- **Rust Compatibility**: Examples showing binary compatibility with Rust bincode
+
+## 🔍 Debugging Examples
+
+All examples include detailed console output for debugging and learning:
+- Original data
+- Encoded size
+- Decoded data
+- Data integrity verification
+
+## 💡 Learning Suggestions
+
+1. **Start with Basics** - Begin with `basic-types.ts` to understand core concepts
+2. **Progress Gradually** - Follow the file order to learn different data structures
+3. **Real Applications** - Check `complex-structures.ts` for practical use cases
+4. **Custom Logic** - Explore `custom-types.ts` to learn custom serialization
+5. **Performance Testing** - Run the performance examples in `index.ts`
+6. **Debug Learning** - Set breakpoints in VS Code and step through the code
+
+## 🛠️ Experimentation and Modification
+
+Feel free to modify these examples to test different scenarios:
+- Change data structures
+- Test edge cases
+- Add new examples
+- Performance comparisons
+- Custom type implementations
+
+Each example file can be run independently, making it easy to test and learn specific features.
+
+## 🦀 Rust Compatibility
+
+The custom types examples particularly demonstrate how to maintain binary compatibility with Rust's bincode format, showing equivalent Rust code that would produce the same binary data. This makes it easy to exchange data between TypeScript and Rust applications.

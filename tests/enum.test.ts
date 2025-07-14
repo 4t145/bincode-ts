@@ -2,7 +2,7 @@ import {
     u8, u32, String,
     Tuple, Enum, Option, Result,
     encode, decode, _, $,
-} from '../src/index';
+} from '../src/index.ts';
 
 describe('Enum Tests', () => {
     test('Simple enum variants', () => {

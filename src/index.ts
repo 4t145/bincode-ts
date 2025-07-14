@@ -76,7 +76,7 @@ export const expr: {
     <N extends number>(expr: N): Unit & Expr<N>
 }
     = <N extends number, T extends EnumVariantType>(expr: N, type?: T): T & Expr<N> => {
-        const asVariant = (type ?? Unit) as T & Expr<N>;
+        const asVariant = (type ?? { ...Unit }) as T & Expr<N>;
         if (expr !== undefined) {
             asVariant[SYMBOL_EXPR] = expr
         }
@@ -326,8 +326,8 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
             {
                 const byteLength = Number(view.getBigUint64(offset, littleEndian));
                 const decoder = new TextDecoder();
-                value = decoder.decode(new Uint8Array(buffer, 8, Number(byteLength))) as Value<T>
                 offset += 8;
+                value = decoder.decode(new Uint8Array(buffer, offset, Number(byteLength))) as Value<T>
                 offset += byteLength;
             }
             break
@@ -415,6 +415,8 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                         [index: number]: [Type, string]
                     }
                     for (const variant in e) {
+                        console.log("variant", variant, e[variant])
+                        console.log("typeof variant", typeof variant)
                         if (typeof variant === 'string') {
                             const variantType = e[variant]
                             indexedDefinition[variantType[SYMBOL_EXPR]] = [variantType, variant]
@@ -424,7 +426,9 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 }
                 const enumDefinition = type as EnumType;
                 const indexedDefinition = indexed(enumDefinition)
-                const variantIndex = view.getUint32(offset);
+                console.log("indexedDefinition", indexedDefinition)
+                const variantIndex = view.getUint32(offset, littleEndian);
+                console.log("variantIndex", variantIndex)
                 offset += 4;
                 const [variantType, variant] = indexedDefinition[variantIndex];
                 const { value: variantValue, offset: variantOffset } = decode(variantType, buffer, offset, config);

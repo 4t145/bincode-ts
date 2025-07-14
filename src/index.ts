@@ -596,6 +596,17 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
     return offset
 }
 
+
+// type assertions
+const testEnum = Enum({
+    Tuple: _(0, Tuple(u8, u8, u8)),
+})
+
+type TestEnumValue = EnumVariantValue<0, [number, number, number]>;
+type TestEnum = typeof testEnum;
+
+
+
 // let buffer = new ArrayBuffer(64);
 // const MyStruct = Struct({
 //     "hello": String,

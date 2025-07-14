@@ -69,7 +69,7 @@ export const SYMBOL_EXPR: unique symbol = Symbol('expr')
 export type Expr<N extends number> = {
     [SYMBOL_EXPR]: N
 }
-export type EnumVariant<E extends number = number, T extends EnumVariantType = EnumVariantType> = (T) & Expr<E>
+export type EnumVariant<E extends number = number, T extends EnumVariantType = EnumVariantType> = T & Expr<E>
 
 export const expr: {
     <N extends number, T extends EnumVariantType>(expr: N, type: T): T & Expr<N>
@@ -82,9 +82,15 @@ export const expr: {
         }
         return asVariant
     }
-
+/**
+ * Creates an enum variant with a specific expression value.
+ * 
+ * @param expr - The expression value for the variant.
+ * @param type - The type of the variant, defaults to Unit if not provided.
+ */
 export const Variant = expr
-export const _ = expr
+
+export const _ = Variant
 
 export type EnumType = {
     [variant: string]: EnumVariant
@@ -198,7 +204,7 @@ type TupleValue<T extends Type[]> =
 type EnumValue<T extends EnumType> = UnionToVariant<EnumValueUnion<T>>
 
 type EnumValueUnion<T extends EnumType> = {
-    [K in Extract<(keyof T), string>]: Value<T[K]>
+    [K in Extract<(keyof T), string>]: T[K] extends EnumVariant<T[K][typeof SYMBOL_EXPR], infer VT> ? Value<VT> : never
 }
 
 type UnionToVariant<T extends {
@@ -263,11 +269,6 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
     let view = new DataView(buffer);
     const littleEndian = config.endian === 'little';
     let value: Value<T> = {} as Value<T>;
-    console.log("decode", {
-        type,
-        buffer,
-        offset
-    })
     switch (type[TYPE_KIND]) {
         case "unit":
             value = {} as Value<T>
@@ -319,7 +320,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
             offset += 8;
             break
         case "bool":
-            value = (view.getUint8(offset) === 0) as Value<T>
+            value = (view.getUint8(offset) === 1) as Value<T>
             offset += 1;
             break
         case "String":
@@ -333,7 +334,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
             break
         case "collection":
             {
-                const byteLength = Number(view.getBigUint64(0, littleEndian));
+                const byteLength = Number(view.getBigUint64(offset, littleEndian));
                 offset += 8;
                 const elementDefinition = type['element'];
                 const collection = [] as Value<Type>[];
@@ -415,8 +416,6 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                         [index: number]: [Type, string]
                     }
                     for (const variant in e) {
-                        console.log("variant", variant, e[variant])
-                        console.log("typeof variant", typeof variant)
                         if (typeof variant === 'string') {
                             const variantType = e[variant]
                             indexedDefinition[variantType[SYMBOL_EXPR]] = [variantType, variant]
@@ -426,9 +425,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 }
                 const enumDefinition = type as EnumType;
                 const indexedDefinition = indexed(enumDefinition)
-                console.log("indexedDefinition", indexedDefinition)
                 const variantIndex = view.getUint32(offset, littleEndian);
-                console.log("variantIndex", variantIndex)
                 offset += 4;
                 const [variantType, variant] = indexedDefinition[variantIndex];
                 const { value: variantValue, offset: variantOffset } = decode(variantType, buffer, offset, config);
@@ -449,12 +446,7 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
     // let offset = 0
     const isLittleEndian = config.endian === 'little';
     // const isVariantIntEncoding = config.int_encoding === 'variant';
-    // console.log("encode", {
-    //     type,
-    //     value,
-    //     buffer,
-    //     offset
-    // })
+
     // function variantIntEncoding(int: number,  buffer: ArrayBuffer, offset: number): number {
     //     const U8_MAX = 251;
     //     const U16_MAX = 1 << 16;
@@ -595,32 +587,3 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
     }
     return offset
 }
-
-
-// type assertions
-const testEnum = Enum({
-    Tuple: _(0, Tuple(u8, u8, u8)),
-})
-
-type TestEnumValue = EnumVariantValue<0, [number, number, number]>;
-type TestEnum = typeof testEnum;
-
-
-
-// let buffer = new ArrayBuffer(64);
-// const MyStruct = Struct({
-//     "hello": String,
-//     "world": u8
-// })
-// const MyTuple = Tuple(MyStruct, MyStruct)
-// const size = encode(MyTuple, [{
-//     hello: "some string",
-//     world: 16
-// }, {
-//     hello: "some string",
-//     world: 16
-// }], buffer);
-// let encoded = buffer.slice(0, size);
-// console.log(encoded);
-// const decoded = decode(MyTuple, encoded).value;
-// console.log(decoded);

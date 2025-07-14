@@ -193,7 +193,9 @@ describe('Primitive Types', () => {
       
       testStrings.forEach(str => {
         const size = encode(RString, str, buffer);
-        expect(size).toBe(8 + str.length); // 8 bytes for length + string bytes
+        // should be 8 bytes for length + string bytes
+        let stringBytesLength = new TextEncoder().encode(str).length;
+        expect(size).toBe(8 + stringBytesLength);
         
         const decoded = decode(RString, buffer.slice(0, size));
         expect(decoded.value).toBe(str);

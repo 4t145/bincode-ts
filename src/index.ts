@@ -273,24 +273,30 @@ export type Value<T extends Type> =
     never :
     T extends CustomType<infer V, any> ? V :
     never
-type BincodeConfig = {
+export type BincodeConfig = {
     endian: 'big' | 'little',
     int_encoding: 'variant' | 'fixed',
     limit?: number
 }
-const STANDARD: BincodeConfig = {
-    endian: 'little',
-    int_encoding: 'fixed',
+export namespace BincodeConfig {
+    export const STANDARD: BincodeConfig = {
+        endian: 'little',
+        int_encoding: 'fixed',
+    }
 }
 
 
 
 const U8_MAX = 251n;
+const U16_FLAG = 251;
 const U16_MAX = 1n << 16n;
+const U32_FLAG = 252;
 const U32_MAX = 1n << 32n;
+const U64_FLAG = 253;
 const U64_MAX = 1n << 64n;
+// const U128_FLAG = 254;
 export const array = <T, N extends number>(...element: T[] & { readonly length: N }): T[] & { readonly length: N } => element
-export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0, config: BincodeConfig = STANDARD): {
+export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0, config: BincodeConfig = BincodeConfig.STANDARD): {
     value: Value<T>
     offset: number
 } => {
@@ -304,18 +310,27 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
         value: number,
         offset: number
     } {
-        let value = 0;
-        let shift = 0;
-        while (true) {
-            const byte = view.getUint8(offset);
-            offset += 1;
-            value |= (byte & 0x7F) << shift;
-            if ((byte & 0x80) === 0) {
-                break;
-            }
-            shift += 7;
+        let flag = view.getUint8(offset);
+        offset += 1;
+        let value: number
+        if (flag < U8_MAX) {
+            value = flag;
+        } else if (flag === U16_FLAG) {
+            value = view.getUint16(offset, littleEndian);
+            offset += 2;
+        } else if (flag === U32_FLAG) {
+            value = view.getUint32(offset, littleEndian);
+            offset += 4;
+        } else if (flag === U64_FLAG) {
+            value = Number(view.getBigUint64(offset, littleEndian));
+            offset += 8;
+        } else {
+            throw new BincodeError('Unimplemented', 'u128 decoding is not implemented yet');
         }
-        return { value, offset };
+        return {
+            value,
+            offset
+        };
     }
     let value: Value<T> = {} as Value<T>;
     switch (type[TYPE_KIND]) {
@@ -511,7 +526,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
     }
 }
 
-export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBuffer, offset: number = 0, config: BincodeConfig = STANDARD): number => {
+export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBuffer, offset: number = 0, config: BincodeConfig = BincodeConfig.STANDARD): number => {
     if (config.limit !== undefined && offset >= config.limit) {
         throw new BincodeError('OverflowLimit', `Buffer overflow at offset ${offset}, limit is ${config.limit}`);
     }
@@ -523,16 +538,22 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
     function variantIntEncoding(int: number, dateView: DataView, offset: number): number {
         if (int < 0) {
             throw new BincodeError('InvalidLength', `Value ${int} cannot be negative`);
-        } else if (int <= U8_MAX) {
+        } else if (int < U8_MAX) {
             dateView.setUint8(offset, int);
             return offset + 1;
-        } else if (int <= U16_MAX) {
+        } else if (int < U16_MAX) {
+            dataView.setUint8(offset, U16_FLAG);
+            offset += 1;
             dataView.setUint16(offset, int, isLittleEndian);
             return offset + 2;
-        } else if (int <= U32_MAX) {
+        } else if (int < U32_MAX) {
+            dataView.setUint8(offset, U32_FLAG);
+            offset += 1;
             dataView.setUint32(offset, int, isLittleEndian);
             return offset + 4;
-        } else if (int <= U64_MAX) {
+        } else if (int < U64_MAX) {
+            dataView.setUint8(offset, U64_FLAG);
+            offset += 1;
             dataView.setBigUint64(offset, BigInt(int), isLittleEndian);
             return offset + 8;
         } else {
@@ -672,7 +693,6 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
                 dataView.setBigUint64(offset, BigInt(collectionValue.length), isLittleEndian);
                 offset += 8;
             }
-            offset += 8;
             for (const element of collectionValue) {
                 offset = encode(collectionType.element, element, buffer, offset, config)
             }

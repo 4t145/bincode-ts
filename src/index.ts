@@ -2,7 +2,7 @@ type IntBitSize = 8 | 16 | 32 | 64 | 128
 type FloatBitSize = 16 | 32 | 64 | 128
 
 export class BincodeError extends Error {
-    bincodeErrorKind: 'Unimplemented' | 'OverflowLimit' | 'InvalidLength'
+    bincodeErrorKind: 'Unimplemented' | 'OverflowLimit' | 'InvalidLength' | 'InvalidVariant' | 'InvalidOptionVariant';
     constructor(kind: BincodeError['bincodeErrorKind'], message: string,) {
         super(message);
         this.name = 'BincodeError';
@@ -22,15 +22,15 @@ export type CustomType<Value, TypeName extends string> = {
         offset: number
     }
 }
-export type Type = TypeKindMarker<UnitTypeMarker> | TypeKindMarker<PrimitiveTypeMarker> | TupleType | ArrayType | StructType | EnumType | CollectionType | CustomType<unknown, string>;
+export type Type = TypeKindMarker<UnitTypeMarker> | TypeKindMarker<PrimitiveTypeMarker> | TupleType | ArrayType | StructType | EnumType | OptionType | CollectionType | CustomType<unknown, string>;
 export const TYPE_KIND: unique symbol = Symbol('type-kind')
-export type TypeKind = UnitTypeMarker | PrimitiveTypeMarker | 'struct' | 'enum' | 'tuple' | 'array' | 'collection' | 'custom'
+export type TypeKind = UnitTypeMarker | PrimitiveTypeMarker | 'struct' | 'enum' | 'option' | 'tuple' | 'array' | 'collection' | 'custom'
 export type TypeKindMarker<T extends TypeKind> = {
-    [TYPE_KIND]: T
+    [TYPE_KIND]: T,
 }
 
 export const TypeKindMarker = <T extends TypeKind>(type: T): TypeKindMarker<T> => ({
-    [TYPE_KIND]: type
+    [TYPE_KIND]: type,
 })
 
 /* 
@@ -115,6 +115,9 @@ export type EnumType = {
     [variant: string]: EnumVariant
 } & TypeKindMarker<'enum'>
 
+export type OptionType = {
+    optionType: Type
+} & TypeKindMarker<'option'>
 
 export type ArrayType = {
     element: Type,
@@ -189,15 +192,16 @@ export const Result = <T extends Type, E extends Type>(ok: T, err: E): Result<T,
     Err: _(1, Tuple(err))
 })
 
-export type Option<T extends Type> = Enum<{
-    Some: EnumVariant<0, Tuple<[T]>>,
-    None: EnumVariant<1, Unit>,
-}>
+export type Option<T extends Type> = OptionType & {
+    optionType: T
+}
 
-export const Option = <T extends Type>(value: T): Option<T> => Enum({
-    Some: _(0, Tuple(value)),
-    None: _(1)
-})
+export const Option = <T extends Type>(value: T): Option<T> => (
+    {
+        optionType: value,
+        [TYPE_KIND]: 'option',
+    }
+)
 
 export const Vec = Collection
 export const Set = Collection
@@ -246,7 +250,7 @@ export const EnumVariantValue = <K, V>(variant: K, value: V): EnumVariantValue<K
     return asJsonEnumVariant
 }
 export const $ = EnumVariantValue;
-export type Value<T extends Type> =
+export type Value<T> =
     T extends Unit ? {} :
     T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${16 | 32 | 64 | 128}`> ? number :
     T extends TypeKindMarker<`${'u' | 'i'}${64}`> ? bigint :
@@ -258,18 +262,14 @@ export type Value<T extends Type> =
     T extends EnumType ? EnumValue<T> :
     T extends CollectionType ? Value<T['element']>[] :
     T extends ArrayType ? Value<T['element']>[] & { readonly length: T['size'] } :
-    // T extends ArrayType ? FixedSizeArray<T['size'], T['element']> :
+    T extends OptionType ? Value<T['optionType']> | null :
     T extends Tuple<infer U> ?
     U extends [] ?
     Unit :
     U extends [infer First] ?
     First extends Type ?
     Value<First> :
-    never :
-    U extends [...infer Many] ?
-    Many extends Type[] ?
-    TupleValue<Many> :
-    never :
+    never : U extends [...infer Many] ? Many extends Type[] ? TupleValue<Many> : never :
     never :
     T extends CustomType<infer V, any> ? V :
     never
@@ -332,7 +332,7 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
             offset
         };
     }
-    let value: Value<T> = {} as Value<T>;
+    let value: Value<T> = null as Value<T>;
     switch (type[TYPE_KIND]) {
         case "unit":
             value = {} as Value<T>
@@ -505,10 +505,33 @@ export const decode = <T extends Type>(type: T, buffer: ArrayBuffer, offset = 0,
                 const indexedDefinition = indexed(enumDefinition)
                 const variantIndex = view.getUint32(offset, littleEndian);
                 offset += 4;
+                if (indexedDefinition[variantIndex] == undefined) {
+                    throw new BincodeError('InvalidVariant', `Invalid enum variant index: ${variantIndex}`);
+                }
                 const [variantType, variant] = indexedDefinition[variantIndex];
                 const { value: variantValue, offset: variantOffset } = decode(variantType, buffer, offset, config);
                 offset = variantOffset;
                 value = EnumVariantValue(variant, variantValue) as Value<T>
+            }
+            break
+        case "option":
+            {
+                const optionDefinition = type as OptionType;
+                const variantFlag = view.getUint8(offset);
+                offset += 1;
+                if (variantFlag === 0) {
+                    return {
+                        value: null as Value<T>,
+                        offset
+                    }
+                } else if (variantFlag === 1) {
+                    return decode(optionDefinition.optionType, buffer, offset, config) as {
+                        value: Value<T>
+                        offset: number
+                    }
+                } else {
+                    throw new BincodeError('InvalidOptionVariant', `Invalid option variant flag: ${variantFlag}`);
+                }
             }
             break
         case "custom":
@@ -682,6 +705,18 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
             offset += 4;
             const variant = enumType[enumValue[VARIANT]];
             offset = encode(variant, variantValue, buffer, offset, config)
+            break
+        }
+        case "option": {
+            const optionType = type as OptionType;
+            if (value === null || value === undefined) {
+                dataView.setUint8(offset, 0);
+                offset += 1;
+            } else {
+                dataView.setUint8(offset, 1);
+                offset += 1;
+                offset = encode(optionType.optionType, value as Value<typeof optionType.optionType>, buffer, offset, config);
+            }
             break
         }
         case "collection": {

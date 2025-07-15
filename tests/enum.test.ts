@@ -2,6 +2,7 @@ import {
     u8, u32, String,
     Tuple, Enum, Option, Result,
     encode, decode, _, $,
+    Value,
 } from '../src/index';
 
 describe('Enum Tests', () => {
@@ -14,7 +15,7 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(64);
 
         // Test Success variant
-        const successValue = $('Success' as const, {});
+        const successValue: Value<typeof Status> = $('Success' as const, {});
         const successSize = encode(Status, successValue, buffer);
         const decodedSuccess = decode(Status, buffer.slice(0, successSize));
         expect(decodedSuccess.value).toEqual(successValue);
@@ -37,7 +38,7 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(32);
 
         // Test Some variant
-        const someValue = $('Some' as const, 42);
+        const someValue: Value<typeof NumberOption> = 42;
         const someSize = encode(NumberOption, someValue, buffer);
         const decodedSome = decode(NumberOption, buffer.slice(0, someSize));
         expect(decodedSome.value).toEqual(someValue);
@@ -48,10 +49,9 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(32);
 
         // Test None variant
-        const noneValue = $('None' as const, {});
-        const noneSize = encode(NumberOption, noneValue, buffer);
+        const noneSize = encode(NumberOption, null, buffer);
         const decodedNone = decode(NumberOption, buffer.slice(0, noneSize));
-        expect(decodedNone.value).toEqual(noneValue);
+        expect(decodedNone.value).toEqual(null);
     });
 
     test('Result type - Ok variant', () => {

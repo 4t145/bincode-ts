@@ -1,8 +1,9 @@
 import {
   u8, u16, u32, String as RString, bool, f32,
   Struct, Tuple, Array, Collection,
-  encode, decode
-} from '../src/index.ts';
+  encode, decode,
+  array,
+} from '../src/index';
 
 describe('Composite Types', () => {
   describe('Struct', () => {
@@ -22,7 +23,7 @@ describe('Composite Types', () => {
 
       const size = encode(PersonStruct, person, buffer);
       const decoded = decode(PersonStruct, buffer.slice(0, size));
-      
+
       expect(decoded.value.name).toBe(person.name);
       expect(decoded.value.age).toBe(person.age);
       expect(decoded.value.isActive).toBe(person.isActive);
@@ -50,7 +51,7 @@ describe('Composite Types', () => {
 
       const size = encode(PersonStruct, person, buffer);
       const decoded = decode(PersonStruct, buffer.slice(0, size));
-      
+
       expect(decoded.value.name).toBe(person.name);
       expect(decoded.value.address.street).toBe(person.address.street);
       expect(decoded.value.address.zipCode).toBe(person.address.zipCode);
@@ -63,7 +64,7 @@ describe('Composite Types', () => {
 
       const size = encode(EmptyStruct, data, buffer);
       const decoded = decode(EmptyStruct, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual({});
     });
   });
@@ -76,7 +77,7 @@ describe('Composite Types', () => {
 
       const size = encode(MyTuple, value, buffer);
       const decoded = decode(MyTuple, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -87,7 +88,7 @@ describe('Composite Types', () => {
 
       const size = encode(SingleTuple, value, buffer);
       const decoded = decode(SingleTuple, buffer.slice(0, size));
-      
+
       expect(decoded.value).toBe(value);
     });
 
@@ -99,7 +100,7 @@ describe('Composite Types', () => {
 
       const size = encode(OuterTuple, value, buffer);
       const decoded = decode(OuterTuple, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -110,7 +111,7 @@ describe('Composite Types', () => {
 
       const size = encode(LargeTuple, value, buffer);
       const decoded = decode(LargeTuple, buffer.slice(0, size));
-      
+
       expect(decoded.value[0]).toBe(value[0]);
       expect(decoded.value[1]).toBe(value[1]);
       expect(decoded.value[2]).toBe(value[2]);
@@ -128,7 +129,7 @@ describe('Composite Types', () => {
 
       const size = encode(NumberArray, value as any, buffer);
       const decoded = decode(NumberArray, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -139,29 +140,28 @@ describe('Composite Types', () => {
 
       const size = encode(StringArray, value as any, buffer);
       const decoded = decode(StringArray, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
     test('Zero-sized array', () => {
       const ZeroArray = Array(u32, 0);
       const buffer = new ArrayBuffer(16);
-      const value: number[] = [];
+      const value = array();
 
-      const size = encode(ZeroArray, value as any, buffer);
+      const size = encode(ZeroArray, value, buffer);
       const decoded = decode(ZeroArray, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
     test('Large array', () => {
       const LargeArray = Array(u8, 100);
       const buffer = new ArrayBuffer(256);
-      const value = globalThis.Array.from({ length: 100 }, (_, i) => i % 256);
-
-      const size = encode(LargeArray, value as any, buffer);
+      const value = globalThis.Array.from({ length: 100 }, (_, i) => i % 256) as number[] & { readonly length: 100 };
+      const size = encode(LargeArray, value, buffer);
       const decoded = decode(LargeArray, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
   });
@@ -174,7 +174,7 @@ describe('Composite Types', () => {
 
       const size = encode(NumberCollection, value, buffer);
       const decoded = decode(NumberCollection, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -185,7 +185,7 @@ describe('Composite Types', () => {
 
       const size = encode(EmptyCollection, value, buffer);
       const decoded = decode(EmptyCollection, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -196,7 +196,7 @@ describe('Composite Types', () => {
 
       const size = encode(StringCollection, value, buffer);
       const decoded = decode(StringCollection, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
 
@@ -207,7 +207,7 @@ describe('Composite Types', () => {
 
       const size = encode(LargeCollection, value, buffer);
       const decoded = decode(LargeCollection, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(value);
     });
   });
@@ -226,12 +226,12 @@ describe('Composite Types', () => {
         id: 123,
         name: "John Doe",
         tags: ["developer", "typescript", "rust"],
-        scores: [95, 87, 92] as any
+        scores: array(95, 87, 92)
       };
 
       const size = encode(UserStruct, user, buffer);
       const decoded = decode(UserStruct, buffer.slice(0, size));
-      
+
       expect(decoded.value.id).toBe(user.id);
       expect(decoded.value.name).toBe(user.name);
       expect(decoded.value.tags).toEqual(user.tags);
@@ -253,7 +253,7 @@ describe('Composite Types', () => {
 
       const size = encode(LineStruct, line, buffer);
       const decoded = decode(LineStruct, buffer.slice(0, size));
-      
+
       expect(decoded.value[0].x).toBeCloseTo(line[0].x, 5);
       expect(decoded.value[0].y).toBeCloseTo(line[0].y, 5);
       expect(decoded.value[1].x).toBeCloseTo(line[1].x, 5);
@@ -276,7 +276,7 @@ describe('Composite Types', () => {
 
       const size = encode(PeopleCollection, people, buffer);
       const decoded = decode(PeopleCollection, buffer.slice(0, size));
-      
+
       expect(decoded.value).toEqual(people);
     });
   });

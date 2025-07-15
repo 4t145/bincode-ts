@@ -1,4 +1,4 @@
-import { encode, decode, CustomType, u32, String, Struct, Collection, TYPE_KIND } from '../src/index.ts';
+import { encode, decode, CustomType, u32, String, Struct, Collection, TYPE_KIND } from '../src/index';
 
 describe('Custom Types', () => {
     // Example: Date custom type that serializes to timestamp

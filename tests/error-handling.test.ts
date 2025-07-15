@@ -1,7 +1,7 @@
 import {
   u8, u16, u32, String as RString,
   Struct, Collection, encode, decode
-} from '../src/index.ts';
+} from '../src/index';
 
 describe('Error Handling and Edge Cases', () => {
   describe('Buffer Overflow Protection', () => {

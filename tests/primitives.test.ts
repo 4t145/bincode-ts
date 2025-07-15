@@ -1,7 +1,7 @@
 import {
   u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, bool, String as RString, Unit,
   encode, decode
-} from '../src/index.ts';
+} from '../src/index';
 
 describe('Primitive Types', () => {
   describe('Unsigned Integers', () => {

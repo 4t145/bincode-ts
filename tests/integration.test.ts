@@ -1,7 +1,7 @@
 import {
   u8, u32, String as RString, bool,
   Struct, encode, decode
-} from '../src/index.ts';
+} from '../src/index';
 
 describe('Basic Integration Tests', () => {
   test('should encode and decode a simple struct', () => {

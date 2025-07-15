@@ -1,6 +1,7 @@
 import {
   u32, u8, String as RString,
-  Struct, Collection, Option, encode, decode, $
+  Struct, Collection, Option, encode, decode, $,
+  Value
 } from 'bincode-ts';
 
 /**
@@ -28,7 +29,7 @@ export function complexNestedExample() {
   });
   
   const buffer = new ArrayBuffer(512);
-  const user = {
+  const user: Value<typeof UserStruct> = {
     id: 12345,
     profile: {
       firstName: "John",

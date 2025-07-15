@@ -636,7 +636,7 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
             const encoder = new TextEncoder();
             const encoded = encoder.encode(value as string);
             if (isVariantIntEncoding) {
-                offset += variantIntEncoding(encoded.byteLength, dataView, offset);
+                offset = variantIntEncoding(encoded.byteLength, dataView, offset);
             } else {
                 dataView.setBigUint64(offset, BigInt(encoded.byteLength), isLittleEndian);
                 offset += 8;
@@ -688,7 +688,7 @@ export const encode = <T extends Type>(type: T, value: Value<T>, buffer: ArrayBu
             const collectionType = type as CollectionType;
             const collectionValue = value as Value<typeof collectionType>;
             if (isVariantIntEncoding) {
-                offset += variantIntEncoding(collectionValue.length, dataView, offset);
+                offset = variantIntEncoding(collectionValue.length, dataView, offset);
             } else {
                 dataView.setBigUint64(offset, BigInt(collectionValue.length), isLittleEndian);
                 offset += 8;

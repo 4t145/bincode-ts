@@ -255,7 +255,7 @@ describe('Error Handling and Edge Cases', () => {
 
         expect(decoded.value).toEqual(data);
         expect(decoded.value.length).toBe(size);
-        
+
         const expectedLengthBytes = expectedVariantLengthBytes(size);
         expect(encodedSize).toBe(expectedLengthBytes + size);
       });
@@ -288,11 +288,11 @@ describe('Error Handling and Edge Cases', () => {
 
     test('should efficiently encode large collections with variant encoding', () => {
       const LimitedCollection = Collection(u32);
-      const buffer = new ArrayBuffer(100000);
+      const buffer = new ArrayBuffer(100000 * 4);
 
       // Test with sizes around critical variant encoding boundaries
       const testSizes = [250, 251, 252, 1000, 65535, 65536, 65537];
-      
+
       testSizes.forEach(size => {
         const largeData = Array.from({ length: size }, (_, i) => i);
         const encodedSize = encode(LimitedCollection, largeData, buffer, 0, variantConfig);
@@ -320,7 +320,8 @@ describe('Error Handling and Edge Cases', () => {
 
       const size = encode(VarStruct, testData, buffer, 0, variantConfig);
       const decoded = decode(VarStruct, buffer.slice(0, size), 0, variantConfig);
-
+      console.log(buffer)
+      console.log(decoded)
       expect(decoded.value.name).toBe(testData.name);
       expect(decoded.value.data).toEqual(testData.data);
       expect(decoded.value.metadata).toEqual(testData.metadata);
@@ -347,7 +348,7 @@ describe('Error Handling and Edge Cases', () => {
 
     test('should validate variant length prefix consistency', () => {
       const TestCollection = Collection(u32);
-      const buffer = new ArrayBuffer(70000);
+      const buffer = new ArrayBuffer(70000 * 4);
 
       const testSizes = [0, 1, 5, 50, 249, 250, 251, 252, 1000, 65535, 65536];
 
@@ -398,7 +399,7 @@ describe('Error Handling and Edge Cases', () => {
         largeArray: Collection(u16)
       });
 
-      const buffer = new ArrayBuffer(150000);
+      const buffer = new ArrayBuffer(1000000);
 
       const mixedData = {
         shortString: "hi",                          // 1-byte length

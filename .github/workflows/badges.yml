@@ -1,0 +1,51 @@
+name: Badges & Docs
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Update badges daily at 00:00 UTC
+    - cron: '0 0 * * *'
+
+jobs:
+  update-badges:
+    name: Update Badges
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Generate test data
+        working-directory: tests/rust-integration
+        run: cargo run --release
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Generate coverage badge
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: ./coverage/lcov.info
+          delete-old-comments: true
+
+      - name: Update README with dynamic badges
+        run: |
+          # This will be used to update badges in README.md
+          echo "Coverage and build status badges will be updated automatically"

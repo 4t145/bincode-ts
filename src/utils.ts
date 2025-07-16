@@ -1,6 +1,6 @@
 import { BincodeError } from ".";
 
-export function setU128(view: DataView, offset: number, value: bigint, littleEndian: boolean) {
+export function setU128(view: DataView, offset: number, value: bigint, littleEndian: boolean): void {
     // 确保值在u128范围内
     if (value < 0n || value >= (1n << 128n)) {
         throw new BincodeError('BigintOutOfRange', `Value ${value} is out of u128 range`);
@@ -40,7 +40,7 @@ export function getU128(view: DataView, offset: number, littleEndian: boolean): 
 }
 
 // 对于有符号的 i128
-export function setI128(view: DataView, offset: number, value: bigint, littleEndian: boolean) {
+export function setI128(view: DataView, offset: number, value: bigint, littleEndian: boolean): void {
     // 确保值在i128范围内
     const minI128 = -(1n << 127n);
     const maxI128 = (1n << 127n) - 1n;

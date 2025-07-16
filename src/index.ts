@@ -34,10 +34,12 @@ export const TypeKindMarker = <T extends TypeKind>(type: T): TypeKindMarker<T> =
     [TYPE_KIND]: type,
 })
 
-export function isType(obj: any): obj is Type {
+export function isType(obj: unknown): obj is Type {
     return obj !== null &&
         typeof obj === 'object' &&
-        obj[TYPE_KIND] !== undefined;
+        (obj as {
+            [TYPE_KIND]?: TypeKind
+        })[TYPE_KIND] !== undefined;
 }
 
 export function isInt(type: Type): type is IntType {
@@ -237,7 +239,7 @@ type EnumValueUnion<T extends EnumType> = {
 }
 
 type UnionToVariant<T extends {
-    [variant: string]: any
+    [variant: string]: unknown
 }> = {
     [K in keyof T]: EnumVariantValue<K, T[K]>;
 }[keyof T];
@@ -250,8 +252,8 @@ export type EnumVariantValue<K, V> = {
 }
 export const EnumVariantValue: {
     <K, V>(variant: K, value: V): EnumVariantValue<K, V>
-    <K>(variant: K): EnumVariantValue<K, never>
-} = <K, V>(variant: K, value?: V): any => {
+    <K>(variant: K): EnumVariantValue<K, void>
+} = <K, V>(variant: K, value?: V) => {
     let asJsonEnumVariant = {
         [VARIANT]: variant,
         [VALUE]: value
@@ -274,7 +276,7 @@ export type Value<T> =
     T extends OptionType ? Value<T['optionType']> | null :
     T extends EnumType ? EnumValue<T> :
     T extends unknown[] & TypeKindMarker<"tuple"> ? TupleValue<T> :
-    T extends CustomType<infer V, any> ? V :
+    T extends CustomType<infer V, string> ? V :
     never
     : unknown
 export type BincodeConfig = {
@@ -282,12 +284,13 @@ export type BincodeConfig = {
     intEncoding: 'variant' | 'fixed',
     limit?: number
 }
-export namespace BincodeConfig {
-    export const STANDARD: BincodeConfig = {
+
+export const BincodeConfig = {
+    STANDARD: {
         endian: 'little',
         intEncoding: 'variant',
-    }
-}
+    } as BincodeConfig
+} as const;
 
 
 
@@ -493,7 +496,7 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
         case "struct":
             {
                 const structDefinition = type as StructType;
-                let decodedObject = {} as any;
+                let decodedObject = {} as Record<string, unknown>;
                 for (const field of Object.keys(type)) {
                     if (typeof field === 'string') {
                         const type = structDefinition[field];
@@ -567,7 +570,6 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                     throw new BincodeError('InvalidOptionVariant', `Invalid option variant flag: ${variantFlag}`);
                 }
             }
-            break
         case "custom":
             {
                 const customType = type as CustomType<unknown, string>;
@@ -591,7 +593,6 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
     // let offset = 0
     const isLittleEndian = config.endian === 'little';
     const isVariantIntEncoding = config.intEncoding === 'variant';
-    value as unknown;
     function variantIntEncoding(int: number | bigint, dateView: DataView, offset: number, type: IntType): number {
         let zigzagInt
         // zigzag encoding
@@ -821,7 +822,7 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
 
 
 export abstract class CustomTypeClass<V, S extends string> implements CustomType<V, S> {
-    readonly [TYPE_KIND]: 'custom' = 'custom';
+    readonly [TYPE_KIND]: 'custom' = 'custom' as const;
     readonly abstract type: S;
 
     abstract encode(buffer: ArrayBuffer, value: V, offset: number, config: BincodeConfig): number;

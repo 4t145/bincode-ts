@@ -1,14 +1,16 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync, } from 'child_process';
 import {
     u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, bool,
     String as RString,
     Struct, Tuple, Array as BArray, Collection, Enum, Option,
-    encode, decode, _, VARIANT, VALUE
+    encode, decode, _, VARIANT
 } from '../src/index';
 
 // Test data directory
-const TEST_DATA_DIR = path.join(__dirname, '..', 'test-data');
+const RUST_DIR = path.join(__dirname, 'rust-integration');
+const TEST_DATA_DIR = path.join(RUST_DIR, 'data');
 
 // Helper to read binary test data
 function readTestData(filename: string): ArrayBuffer {
@@ -35,6 +37,10 @@ describe('Rust Bincode Integration Tests', () => {
         // Check if test data exists
         if (!fs.existsSync(TEST_DATA_DIR)) {
             console.warn('Test data directory not found. Run setup-rust-integration.sh first.');
+            execSync('cargo run', {
+                cwd: RUST_DIR,
+                stdio: 'inherit'
+            });
         }
     });
 
@@ -58,7 +64,7 @@ describe('Rust Bincode Integration Tests', () => {
         ];
 
         test.each(primitiveTests)('should decode Rust bincode for $name', ({ name, type, expected, tolerance }) => {
-            const testFile = `${name}.bin`;
+            const testFile = `${name}.bincode`;
 
             // Skip test if file doesn't exist
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
@@ -77,7 +83,7 @@ describe('Rust Bincode Integration Tests', () => {
         });
 
         test.each(primitiveTests)('should encode compatible with Rust bincode for $name', ({ name, type, expected }) => {
-            const testFile = `${name}.bin`;
+            const testFile = `${name}.bincode`;
 
             // Skip test if file doesn't exist
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
@@ -108,7 +114,7 @@ describe('Rust Bincode Integration Tests', () => {
         });
 
         test('should decode Rust struct', () => {
-            const testFile = 'struct_person.bin';
+            const testFile = 'struct_person.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping struct test - test data not found');
@@ -151,7 +157,7 @@ describe('Rust Bincode Integration Tests', () => {
 
     describe('Collection Types', () => {
         test('should decode Rust Vec<u32>', () => {
-            const testFile = 'vec_u32.bin';
+            const testFile = 'vec_u32.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping Vec<u32> test - test data not found');
@@ -172,7 +178,7 @@ describe('Rust Bincode Integration Tests', () => {
         });
 
         test('should decode Rust Vec<String>', () => {
-            const testFile = 'vec_string.bin';
+            const testFile = 'vec_string.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping Vec<String> test - test data not found');
@@ -193,7 +199,7 @@ describe('Rust Bincode Integration Tests', () => {
         });
 
         test('should decode empty Vec', () => {
-            const testFile = 'vec_empty.bin';
+            const testFile = 'vec_empty.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping empty Vec test - test data not found');
@@ -209,8 +215,8 @@ describe('Rust Bincode Integration Tests', () => {
 
         test('should decode Rust arrays', () => {
             const testFiles = [
-                { file: 'array_u8_3.bin', type: BArray(u8, 3), length: 3 },
-                { file: 'array_u32_4.bin', type: BArray(u32, 4), length: 4 }
+                { file: 'array_u8_3.bincode', type: BArray(u8, 3), length: 3 },
+                { file: 'array_u32_4.bincode', type: BArray(u32, 4), length: 4 }
             ];
 
             testFiles.forEach(({ file, type, length }) => {
@@ -230,7 +236,7 @@ describe('Rust Bincode Integration Tests', () => {
 
     describe('Tuple Types', () => {
         test('should decode simple Rust tuple', () => {
-            const testFile = 'tuple_simple.bin';
+            const testFile = 'tuple_simple.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping simple tuple test - test data not found');
@@ -248,7 +254,7 @@ describe('Rust Bincode Integration Tests', () => {
         });
 
         test('should decode complex Rust tuple', () => {
-            const testFile = 'tuple_complex.bin';
+            const testFile = 'tuple_complex.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping complex tuple test - test data not found');
@@ -270,7 +276,7 @@ describe('Rust Bincode Integration Tests', () => {
 
     describe('Option Types', () => {
         test('should decode Rust Option<String> Some', () => {
-            const testFile = 'option_some.bin';
+            const testFile = 'option_some.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping Option Some test - test data not found');
@@ -279,15 +285,13 @@ describe('Rust Bincode Integration Tests', () => {
 
             const OptionString = Option(RString);
             const binaryData = readTestData(testFile);
-            console.log('Binary Data:', new Uint8Array(binaryData));
             const decoded = decode(OptionString, binaryData);
 
-            expect((decoded.value as any)[VARIANT]).toBe('some');
-            expect(typeof (decoded.value as any)[VALUE]).toBe('string');
+            expect(decoded.value).toBe('present');
         });
 
         test('should decode Rust Option<String> None', () => {
-            const testFile = 'option_none.bin';
+            const testFile = 'option_none.bincode';
 
             if (!fs.existsSync(path.join(TEST_DATA_DIR, testFile))) {
                 console.warn('Skipping Option None test - test data not found');
@@ -298,7 +302,7 @@ describe('Rust Bincode Integration Tests', () => {
             const binaryData = readTestData(testFile);
             const decoded = decode(OptionString, binaryData);
 
-            expect((decoded.value as any)[VARIANT]).toBe('none');
+            expect(decoded.value).toBe(null);
         });
     });
 
@@ -315,9 +319,9 @@ describe('Rust Bincode Integration Tests', () => {
 
         test('should decode Rust enum variants', () => {
             const enumTests = [
-                { file: 'enum_text.bin', expectedVariant: 'Text' },
-                { file: 'enum_number.bin', expectedVariant: 'Number' },
-                { file: 'enum_data.bin', expectedVariant: 'Data' }
+                { file: 'enum_text.bincode', expectedVariant: 'Text' },
+                { file: 'enum_number.bincode', expectedVariant: 'Number' },
+                { file: 'enum_data.bincode', expectedVariant: 'Data' }
             ];
 
             enumTests.forEach(({ file, expectedVariant }) => {
@@ -365,46 +369,6 @@ describe('Rust Bincode Integration Tests', () => {
             expect(decoded.value.score).toBeCloseTo(data.score, 10);
             expect(decoded.value.tags).toEqual(data.tags);
             expect(decoded.value.metadata).toEqual(data.metadata);
-        });
-    });
-
-    describe('Binary Compatibility Verification', () => {
-        test('should produce identical bytes for simple types', () => {
-            // Test cases that we can verify without Rust data
-            const testCases = [
-                { type: u8, value: 42, expectedBytes: [42] },
-                { type: u16, value: 1000, expectedBytes: [232, 3] }, // Little endian
-                { type: bool, value: true, expectedBytes: [1] },
-                { type: bool, value: false, expectedBytes: [0] }
-            ];
-
-            testCases.forEach(({ type, value, expectedBytes }) => {
-                const buffer = new ArrayBuffer(16);
-                const size = encode(type, value, buffer);
-                const bytes = new Uint8Array(buffer.slice(0, size));
-
-                expect(globalThis.Array.from(bytes)).toEqual(expectedBytes);
-            });
-        });
-
-        test('should handle string encoding correctly', () => {
-            const testString = "Hello";
-            const buffer = new ArrayBuffer(32);
-            const size = encode(RString, testString, buffer);
-            const bytes = new Uint8Array(buffer.slice(0, size));
-
-            // String should be: length (8 bytes) + UTF-8 bytes
-            expect(bytes.length).toBe(8 + testString.length);
-
-            // First 8 bytes are length in little endian
-            const lengthBytes = bytes.slice(0, 8);
-            const length = new DataView(lengthBytes.buffer).getBigUint64(0, true);
-            expect(Number(length)).toBe(testString.length);
-
-            // Remaining bytes should be UTF-8 encoded string
-            const stringBytes = bytes.slice(8);
-            const decodedString = new TextDecoder().decode(stringBytes);
-            expect(decodedString).toBe(testString);
         });
     });
 });

@@ -250,13 +250,13 @@ describe('Custom Types', () => {
             const buffer = new ArrayBuffer(32);
 
             // Test little endian
-            encode(ComplexType, complex, buffer, 0, { endian: 'little', int_encoding: 'fixed' });
-            const { value: littleDecoded } = decode(ComplexType, buffer, 0, { endian: 'little', int_encoding: 'fixed' });
+            encode(ComplexType, complex, buffer, 0, { endian: 'little', intEncoding: 'fixed' });
+            const { value: littleDecoded } = decode(ComplexType, buffer, 0, { endian: 'little', intEncoding: 'fixed' });
 
             // Test big endian
             const bigEndianBuffer = new ArrayBuffer(32);
-            encode(ComplexType, complex, bigEndianBuffer, 0, { endian: 'big', int_encoding: 'fixed' });
-            const { value: bigDecoded } = decode(ComplexType, bigEndianBuffer, 0, { endian: 'big', int_encoding: 'fixed' });
+            encode(ComplexType, complex, bigEndianBuffer, 0, { endian: 'big', intEncoding: 'fixed' });
+            const { value: bigDecoded } = decode(ComplexType, bigEndianBuffer, 0, { endian: 'big', intEncoding: 'fixed' });
 
             expect(littleDecoded).toEqual(complex);
             expect(bigDecoded).toEqual(complex);

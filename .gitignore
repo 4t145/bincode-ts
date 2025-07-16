@@ -54,4 +54,6 @@ Thumbs.db
 *.tmp
 *.temp
 
-test-data
+# rust
+target/
+Cargo.lock

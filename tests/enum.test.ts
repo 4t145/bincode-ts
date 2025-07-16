@@ -15,19 +15,19 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(64);
 
         // Test Success variant
-        const successValue: Value<typeof Status> = $('Success' as const, {});
+        const successValue: Value<typeof Status> = $('Success');
         const successSize = encode(Status, successValue, buffer);
         const decodedSuccess = decode(Status, buffer.slice(0, successSize));
         expect(decodedSuccess.value).toEqual(successValue);
 
         // Test Error variant
-        const errorValue = $('Error' as const, "Something went wrong");
+        const errorValue = $('Error' as const, ["Something went wrong"] as [string]);
         const errorSize = encode(Status, errorValue, buffer);
         const decodedError = decode(Status, buffer.slice(0, errorSize));
         expect(decodedError.value).toEqual(errorValue);
 
         // Test Pending variant
-        const pendingValue = $('Pending' as const, {});
+        const pendingValue = $('Pending' as const);
         const pendingSize = encode(Status, pendingValue, buffer);
         const decodedPending = decode(Status, buffer.slice(0, pendingSize));
         expect(decodedPending.value).toEqual(pendingValue);
@@ -59,7 +59,7 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(64);
 
         // Test Ok variant
-        const okValue = $('Ok' as const, "Success!");
+        const okValue = $('Ok' as const, ["Success!"] as [string]);
         const okSize = encode(StringResult, okValue, buffer);
         const decodedOk = decode(StringResult, buffer.slice(0, okSize));
         expect(decodedOk.value).toEqual(okValue);
@@ -70,7 +70,7 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(64);
 
         // Test Err variant
-        const errValue = $('Err' as const, 404);
+        const errValue = $('Err' as const, [404] as [number]);
         const errSize = encode(StringResult, errValue, buffer);
         const decodedErr = decode(StringResult, buffer.slice(0, errSize));
         expect(decodedErr.value).toEqual(errValue);
@@ -87,13 +87,13 @@ describe('Enum Tests', () => {
         const buffer = new ArrayBuffer(128);
 
         // Test Text variant
-        const textValue = $('Text' as const, "Hello World");
+        const textValue = $('Text' as const, ["Hello World"] as [string]);
         const textSize = encode(MessageEnum, textValue, buffer);
         const decodedText = decode(MessageEnum, buffer.slice(0, textSize));
         expect(decodedText.value).toEqual(textValue);
 
         // Test Number variant
-        const numberValue = $('Number' as const, 12345);
+        const numberValue = $('Number' as const, [12345] as [number]);
         const numberSize = encode(MessageEnum, numberValue, buffer);
         const decodedNumber = decode(MessageEnum, buffer.slice(0, numberSize));
         expect(decodedNumber.value).toEqual(numberValue);
@@ -105,7 +105,7 @@ describe('Enum Tests', () => {
         expect(decodedList.value).toEqual(listValue);
 
         // Test Empty variant
-        const emptyValue = $('Empty' as const, {});
+        const emptyValue = $('Empty' as const);
         const emptySize = encode(MessageEnum, emptyValue, buffer);
         const decodedEmpty = decode(MessageEnum, buffer.slice(0, emptySize));
         expect(decodedEmpty.value).toEqual(emptyValue);

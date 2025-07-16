@@ -84,12 +84,12 @@ describe('Composite Types', () => {
     test('Single element tuple', () => {
       const SingleTuple = Tuple(u32);
       const buffer = new ArrayBuffer(16);
-      const value = 42;
+      const value: [number] = [42];
 
       const size = encode(SingleTuple, value, buffer);
       const decoded = decode(SingleTuple, buffer.slice(0, size));
 
-      expect(decoded.value).toBe(value);
+      expect(decoded.value).toStrictEqual(value);
     });
 
     test('Nested tuple', () => {

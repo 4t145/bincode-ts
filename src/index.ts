@@ -1,7 +1,7 @@
 import { getI128, getU128, setI128, setU128 } from "./utils";
 
 type IntBitSize = 8 | 16 | 32 | 64 | 128
-type FloatBitSize = 16 | 32 | 64 | 128
+type FloatBitSize = 32 | 64
 
 export class BincodeError extends Error {
     bincodeErrorKind: 'Unimplemented' | 'OverflowLimit' | 'InvalidLength' | 'InvalidVariant' | 'InvalidOptionVariant' | 'InvalidType' | 'BigintOutOfRange';
@@ -75,14 +75,14 @@ export type i64 = TypeKindMarker<'i64'>;
 export const i64: i64 = TypeKindMarker('i64');
 export type i128 = TypeKindMarker<'i128'>;
 export const i128: i128 = TypeKindMarker('i128');
-export type f16 = TypeKindMarker<'f16'>;
-export const f16: f16 = TypeKindMarker('f16');
+// export type f16 = TypeKindMarker<'f16'>;
+// export const f16: f16 = TypeKindMarker('f16');
 export type f32 = TypeKindMarker<'f32'>;
 export const f32: f32 = TypeKindMarker('f32');
 export type f64 = TypeKindMarker<'f64'>;
 export const f64: f64 = TypeKindMarker('f64');
-export type f128 = TypeKindMarker<'f128'>;
-export const f128 = TypeKindMarker('f128');
+// export type f128 = TypeKindMarker<'f128'>;
+// export const f128 = TypeKindMarker('f128');
 export type bool = TypeKindMarker<'bool'>;
 export const bool: bool = TypeKindMarker('bool');
 export type String = TypeKindMarker<'String'>;
@@ -264,7 +264,7 @@ export const $ = EnumVariantValue;
 
 export type Value<T> =
     T extends Type ?
-    T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${16 | 32 | 64 | 128}`> ? number :
+    T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${32 | 64}`> ? number :
     T extends TypeKindMarker<`${'u' | 'i'}${64}`> ? bigint :
     T extends TypeKindMarker<'bool'> ? boolean :
     T extends TypeKindMarker<'String'> ? string :
@@ -408,8 +408,8 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
             value = getI128(view, offset, littleEndian) as Value<T>
             offset += 16;
             break
-        case "f16":
-            throw new BincodeError('Unimplemented', 'f16 decoding is not implemented yet');
+        // case "f16":
+        //     throw new BincodeError('Unimplemented', 'f16 decoding is not implemented yet');
         case "f32":
             value = view.getFloat32(offset, littleEndian) as Value<T>
             offset += 4;
@@ -706,9 +706,9 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
             offset += 16;
             break
         }
-        case "f16": {
-            throw new BincodeError('Unimplemented', 'f16 encoding is not implemented yet');
-        }
+        // case "f16": {
+        //     throw new BincodeError('Unimplemented', 'f16 encoding is not implemented yet');
+        // }
         case "f32": {
             dataView.setFloat32(offset, value as number, isLittleEndian);
             offset += 4;
@@ -719,9 +719,9 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
             offset += 8;
             break
         }
-        case "f128": {
-            throw new BincodeError('Unimplemented', 'f128 encoding is not implemented yet');
-        }
+        // case "f128": {
+        //     throw new BincodeError('Unimplemented', 'f128 encoding is not implemented yet');
+        // }
         case "bool": {
             dataView.setUint8(offset, value as number);
             offset += 1;

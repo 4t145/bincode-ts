@@ -58,4 +58,4 @@ jobs:
       - name: Create GitHub Release Assets
         run: |
           npm pack
-          mv *.tgz rtype-${{ needs.release-please.outputs.tag_name }}.tgz
+          mv *.tgz bincode-ts-${{ needs.release-please.outputs.tag_name }}.tgz

@@ -1,7 +1,7 @@
 # bincode-ts
 
 [![CI](https://github.com/4t145/bincode-ts/workflows/CI/badge.svg)](https://github.com/4t145/bincode-ts/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/4t145/bincode-ts/branch/main/graph/badge.svg)](https://codecov.io/gh/4t145/bincode-ts)
+[![codecov](https://codecov.io/gh/4t145/bincode-ts/branch/master/graph/badge.svg)](https://codecov.io/gh/4t145/bincode-ts)
 [![npm version](https://badge.fury.io/js/bincode-ts.svg)](https://badge.fury.io/js/bincode-ts)
 [![npm downloads](https://img.shields.io/npm/dm/bincode-ts.svg)](https://www.npmjs.com/package/bincode-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

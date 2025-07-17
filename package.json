@@ -52,8 +52,7 @@
     "bincode",
     "rust",
     "cross-platform",
-    "data-structures",
-    "rtype"
+    "data-structures"
   ],
   "author": "4t145",
   "license": "MIT",
@@ -78,10 +77,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/4t145/rtype.git"
+    "url": "git+https://github.com/4t145/bincode-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/4t145/rtype/issues"
+    "url": "https://github.com/4t145/bincode-ts/issues"
   },
-  "homepage": "https://github.com/4t145/rtype#readme"
+  "homepage": "https://github.com/4t145/bincode-ts#readme"
 }

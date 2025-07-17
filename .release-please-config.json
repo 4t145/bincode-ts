@@ -2,7 +2,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "rtype",
+      "package-name": "bincode-ts",
       "changelog-sections": [
         {"type": "feat", "section": "✨ Features", "hidden": false},
         {"type": "fix", "section": "🐛 Bug Fixes", "hidden": false},

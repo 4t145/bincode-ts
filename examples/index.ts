@@ -10,7 +10,7 @@ import { runCustomTypeExamples } from './custom-types';
  * 运行所有示例
  */
 export function runAllExamples() {
-  console.log('🚀 Running All RType Examples\n');
+  console.log('🚀 Running All bincode ts Examples\n');
   console.log('=' .repeat(50));
   
   try {

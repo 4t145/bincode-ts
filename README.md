@@ -1,18 +1,18 @@
-# RType
+# bincode-ts
 
-[![CI](https://github.com/4t145/rtype/workflows/CI/badge.svg)](https://github.com/4t145/rtype/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/4t145/rtype/branch/main/graph/badge.svg)](https://codecov.io/gh/4t145/rtype)
-[![npm version](https://badge.fury.io/js/rtype.svg)](https://badge.fury.io/js/rtype)
-[![npm downloads](https://img.shields.io/npm/dm/rtype.svg)](https://www.npmjs.com/package/rtype)
+[![CI](https://github.com/4t145/bincode-ts/workflows/CI/badge.svg)](https://github.com/4t145/bincode-ts/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/4t145/bincode-ts/branch/main/graph/badge.svg)](https://codecov.io/gh/4t145/bincode-ts)
+[![npm version](https://badge.fury.io/js/bincode-ts.svg)](https://badge.fury.io/js/bincode-ts)
+[![npm downloads](https://img.shields.io/npm/dm/bincode-ts.svg)](https://www.npmjs.com/package/bincode-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://badgen.net/badge/Built%20With/TypeScript/blue)](https://www.typescriptlang.org/)
 [![Rust Compatible](https://img.shields.io/badge/Rust%20Bincode-Compatible-orange.svg)](https://github.com/bincode-org/bincode)
 
-A high-performance TypeScript library for type-safe binary serialization using Rust-inspired bincode format. RType provides efficient encoding and decoding of complex data structures with full TypeScript type safety and support for both fixed and variable-length encoding schemes.
+A high-performance TypeScript library for type-safe binary serialization using Rust-inspired bincode format. bincode-ts provides efficient encoding and decoding of complex data structures with full TypeScript type safety and support for both fixed and variable-length encoding schemes.
 
-## What is RType?
+## What is bincode-ts?
 
-RType is a binary serialization library that brings Rust's type system concepts to TypeScript, offering:
+bincode-ts is a binary serialization library that brings Rust's type system concepts to TypeScript, offering:
 - **Type Safety**: Full TypeScript support with compile-time type checking
 - **High Performance**: Efficient binary serialization optimized for speed
 - **Flexible Encoding**: Support for both fixed and variable-length integer encoding
@@ -193,7 +193,7 @@ const errValue = $('Err', [404] as [number]);
 
 ## Encoding Configurations
 
-RType supports different encoding configurations for optimal performance:
+bincode-ts supports different encoding configurations for optimal performance:
 
 ### Standard (Fixed-Length) Encoding
 

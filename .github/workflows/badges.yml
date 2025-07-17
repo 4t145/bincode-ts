@@ -44,8 +44,3 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           lcov-file: ./coverage/lcov.info
           delete-old-comments: true
-
-      - name: Update README with dynamic badges
-        run: |
-          # This will be used to update badges in README.md
-          echo "Coverage and build status badges will be updated automatically"

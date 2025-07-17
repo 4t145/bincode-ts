@@ -2,7 +2,7 @@ name: Badges & Docs
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, dev ]
   schedule:
     # Update badges daily at 00:00 UTC
     - cron: '0 0 * * *'

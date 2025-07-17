@@ -1,6 +1,6 @@
 {
   "name": "bincode-ts",
-  "version": "0.2",
+  "version": "0.2.0",
   "description": "Codec bincode in typescript.",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",

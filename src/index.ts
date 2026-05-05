@@ -566,7 +566,14 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, len = buffer
         case "option":
             {
                 const optionDefinition = type as OptionType;
-                const variantFlag = view.getUint8(offset);
+                // `view` is constructed at byteOffset=offset (see top of decode),
+                // so view-relative index 0 corresponds to buffer position `offset`.
+                // Passing `offset` here would read at `offset + offset`, which is
+                // either out-of-bounds or the wrong byte whenever this case is
+                // reached at non-zero offset (struct field, collection element,
+                // any nested context). Top-level Option tests didn't catch it
+                // because they always start at offset=0.
+                const variantFlag = view.getUint8(0);
                 offset += 1;
                 if (variantFlag === 0) {
                     return {

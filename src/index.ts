@@ -1,7 +1,7 @@
 import { getI128, getU128, setI128, setU128 } from "./utils";
 
 type IntBitSize = 8 | 16 | 32 | 64 | 128
-type FloatBitSize = 32 | 64
+type FloatBitSize = 16 | 32 | 64
 
 export class BincodeError extends Error {
     bincodeErrorKind: 'Unimplemented' | 'OverflowLimit' | 'InvalidLength' | 'InvalidVariant' | 'InvalidOptionVariant' | 'InvalidType' | 'BigintOutOfRange';
@@ -18,7 +18,7 @@ export type CustomType<Value, TypeName extends string> = {
     [TYPE_KIND]: 'custom',
     type: TypeName,
     encode(buffer: ArrayBuffer, value: Value, offset: number, config: BincodeConfig): number,
-    decode(buffer: ArrayBuffer, offset: number, config: BincodeConfig): {
+    decode(buffer: ArrayBuffer, offset: number, len: number, config: BincodeConfig): {
         value: Value,
         offset: number
     }
@@ -52,8 +52,7 @@ export type IntType = UnsignedIntType | SignedIntType
 export type SignedIntType = TypeKindMarker<`i${IntBitSize}`>
 export type UnsignedIntType = TypeKindMarker<`u${IntBitSize}`>
 export type Never = TypeKindMarker<'never'>;
-/* 
-    primitives
+/* primitives
 */
 export type u8 = TypeKindMarker<'u8'>;
 export const u8: u8 = TypeKindMarker('u8');
@@ -75,8 +74,8 @@ export type i64 = TypeKindMarker<'i64'>;
 export const i64: i64 = TypeKindMarker('i64');
 export type i128 = TypeKindMarker<'i128'>;
 export const i128: i128 = TypeKindMarker('i128');
-// export type f16 = TypeKindMarker<'f16'>;
-// export const f16: f16 = TypeKindMarker('f16');
+export type f16 = TypeKindMarker<'f16'>;
+export const f16: f16 = TypeKindMarker('f16');
 export type f32 = TypeKindMarker<'f32'>;
 export const f32: f32 = TypeKindMarker('f32');
 export type f64 = TypeKindMarker<'f64'>;
@@ -121,8 +120,7 @@ export const expr: {
     }
 /**
  * Creates an enum variant with a specific expression value.
- * 
- * @param expr - The expression value for the variant.
+ * * @param expr - The expression value for the variant.
  * @param type - The type of the variant, defaults to Unit if not provided.
  */
 export const Variant = expr
@@ -264,7 +262,7 @@ export const $ = EnumVariantValue;
 
 export type Value<T> =
     T extends Type ?
-    T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${32 | 64}`> ? number :
+    T extends TypeKindMarker<`${'u' | 'i'}${8 | 16 | 32}` | `f${16 | 32 | 64}`> ? number :
     T extends TypeKindMarker<`${'u' | 'i'}${64}`> ? bigint :
     T extends TypeKindMarker<'bool'> ? boolean :
     T extends TypeKindMarker<'String'> ? string :
@@ -307,37 +305,37 @@ const U128_FLAG = 254;
 const U128_MIN = -0x8000_0000_0000_0000_0000_0000_0000_0000n;
 const U128_MAX = 0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffffn;
 export const array = <T, N extends number>(...element: T[] & { readonly length: N }): T[] & { readonly length: N } => element
-export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: BincodeConfig = BincodeConfig.STANDARD): {
+export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, len = buffer.byteLength, config: BincodeConfig = BincodeConfig.STANDARD): {
     value: Value<T>
     offset: number
 } => {
     if (config.limit !== undefined && offset >= config.limit) {
         throw new BincodeError('OverflowLimit', `Buffer overflow at offset ${offset}, limit is ${config.limit}`);
     }
-    let view = new DataView(buffer);
+    let view = new DataView(buffer, offset, len - offset);
     const littleEndian = config.endian === 'little';
     const isVariantIntEncoding = config.intEncoding === 'variant';
-    function decodeVariantInt(offset: number, view: DataView, type: IntType): {
+    function decodeVariantInt(view: DataView, type: IntType): {
         value: number | bigint,
-        offset: number
+        size: number
     } {
-        let flag = view.getUint8(offset);
-        offset += 1;
+        let flag = view.getUint8(0);
+        let size = 1;
         let zigzagInt: number | bigint;
         if (flag <= U8_MAX) {
             zigzagInt = flag;
         } else if (flag === U16_FLAG) {
-            zigzagInt = view.getUint16(offset, littleEndian);
-            offset += 2;
+            zigzagInt = view.getUint16(1, littleEndian);
+            size += 2;
         } else if (flag === U32_FLAG) {
-            zigzagInt = view.getUint32(offset, littleEndian);
-            offset += 4;
+            zigzagInt = view.getUint32(1, littleEndian);
+            size += 4;
         } else if (flag === U64_FLAG) {
-            zigzagInt = view.getBigUint64(offset, littleEndian);
-            offset += 8;
+            zigzagInt = view.getBigUint64(1, littleEndian);
+            size += 8;
         } else if (flag === U128_FLAG) {
-            zigzagInt = getU128(view, offset, littleEndian);
-            offset += 16;
+            zigzagInt = getU128(view, 1, littleEndian);
+            size += 16;
         } else {
             throw new BincodeError('BigintOutOfRange', `Invalid int encoding flag: ${flag}`);
         }
@@ -352,7 +350,7 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
         }
         return {
             value,
-            offset
+            size
         };
     }
     let value: Value<T> = undefined as Value<T>;
@@ -360,77 +358,91 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
         throw new BincodeError('InvalidType', `Expected a valid type definition, but got ${type}`);
     }
     if (isVariantIntEncoding && isInt(type) && type[TYPE_KIND] !== 'u8' && type[TYPE_KIND] !== 'i8') {
-        return decodeVariantInt(offset, view, type) as {
-            value: Value<T>
-            offset: number
-        }
+        const result = decodeVariantInt(view, type);
+        return {
+            value: result.value as Value<T>,
+            offset: result.size + offset
+        };
     }
     switch (type[TYPE_KIND]) {
         case "never":
             throw new BincodeError('InvalidType', 'Cannot decode a value of type "never"');
         case "u8":
-            value = view.getUint8(offset) as Value<T>
+            value = view.getUint8(0) as Value<T>
             offset += 1;
             break
         case "u16":
-            value = view.getUint16(offset, littleEndian) as Value<T>
+            value = view.getUint16(0, littleEndian) as Value<T>
             offset += 2;
             break
         case "u32":
-            value = view.getUint32(offset, littleEndian) as Value<T>
+            value = view.getUint32(0, littleEndian) as Value<T>
             offset += 4;
             break
         case "u64":
-            value = view.getBigUint64(offset, littleEndian) as Value<T>
+            value = view.getBigUint64(0, littleEndian) as Value<T>
             offset += 8;
             break
         case "u128":
-            value = getU128(view, offset, littleEndian) as Value<T>
+            value = getU128(view, 0, littleEndian) as Value<T>
             offset += 16;
             break
         case "i8":
-            value = view.getInt8(offset) as Value<T>
+            value = view.getInt8(0) as Value<T>
             offset += 1;
             break
         case "i16":
-            value = view.getInt16(offset, littleEndian) as Value<T>
+            value = view.getInt16(0, littleEndian) as Value<T>
             offset += 2;
             break
         case "i32":
-            value = view.getInt32(offset, littleEndian) as Value<T>
+            value = view.getInt32(0, littleEndian) as Value<T>
             offset += 4;
             break
         case "i64":
-            value = view.getBigInt64(offset, littleEndian) as Value<T>
+            value = view.getBigInt64(0, littleEndian) as Value<T>
             offset += 8;
             break
         case "i128":
-            value = getI128(view, offset, littleEndian) as Value<T>
+            value = getI128(view, 0, littleEndian) as Value<T>
             offset += 16;
             break
-        // case "f16":
-        //     throw new BincodeError('Unimplemented', 'f16 decoding is not implemented yet');
+
+        case "f16":
+            if (isVariantIntEncoding) {
+                const { value: rawU16, size } = decodeVariantInt(view, u16);
+                offset += size;
+                const tempBuffer = new ArrayBuffer(2);
+                const tempView = new DataView(tempBuffer);
+                tempView.setUint16(0, Number(rawU16), littleEndian);
+                value = tempView.getFloat16(0, littleEndian) as Value<T>;
+            } else {
+                value = view.getFloat16(0, littleEndian) as Value<T>;
+                offset += 2;
+            }
+            break
         case "f32":
-            value = view.getFloat32(offset, littleEndian) as Value<T>
+            value = view.getFloat32(0, littleEndian) as Value<T>;
             offset += 4;
             break
         case "f64":
-            value = view.getFloat64(offset, littleEndian) as Value<T>
+            value = view.getFloat64(0, littleEndian) as Value<T>;
             offset += 8;
             break
+
         case "bool":
-            value = (view.getUint8(offset) === 1) as Value<T>
+            value = (view.getUint8(0) === 1) as Value<T>
             offset += 1;
             break
         case "String":
             {
                 let byteLength: number
                 if (isVariantIntEncoding) {
-                    const { value, offset: newOffset } = decodeVariantInt(offset, view, u64);
-                    offset = newOffset;
+                    const { value, size } = decodeVariantInt(view, u64);
+                    offset += size;
                     byteLength = Number(value);
                 } else {
-                    byteLength = Number(view.getBigUint64(offset, littleEndian));
+                    byteLength = Number(view.getBigUint64(0, littleEndian));
                     offset += 8;
                 }
                 const decoder = new TextDecoder();
@@ -442,11 +454,11 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
             {
                 let byteLength: number;
                 if (isVariantIntEncoding) {
-                    const { value, offset: newOffset } = decodeVariantInt(offset, view, u64);
-                    offset = newOffset;
+                    const { value, size } = decodeVariantInt(view, u64);
+                    offset += size;
                     byteLength = Number(value);
                 } else {
-                    byteLength = Number(view.getBigUint64(offset, littleEndian));
+                    byteLength = Number(view.getBigUint64(0, littleEndian));
                     offset += 8;
                 }
                 const elementDefinition = type['element'];
@@ -454,9 +466,9 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                 for (let index = 0; index < byteLength; index += 1) {
                     const {
                         value: element,
-                        offset: elementOffset
-                    } = decode<unknown>(elementDefinition, buffer, offset, config);
-                    offset = elementOffset
+                        offset: newOffset
+                    } = decode<unknown>(elementDefinition, buffer, offset, len, config);
+                    offset = newOffset
                     collection.push(element)
                 }
                 value = collection as Value<T>
@@ -469,9 +481,9 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                 for (const elementDefinition of tupleDefinition) {
                     const {
                         value: element,
-                        offset: elementOffset
-                    } = decode<unknown>(elementDefinition, buffer, offset, config);
-                    offset = elementOffset
+                        offset: newOffset
+                    } = decode<unknown>(elementDefinition, buffer, offset, len, config);
+                    offset = newOffset
                     tupleValue.push(element)
                 }
                 value = tupleValue as Value<T>
@@ -485,9 +497,9 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                 for (let index = 0; index < arrayDefinition.size; index += 1) {
                     const {
                         value: element,
-                        offset: elementOffset
-                    } = decode<unknown>(elementDefinition, buffer, offset, config);
-                    offset = elementOffset
+                        offset: newOffset
+                    } = decode<unknown>(elementDefinition, buffer, offset, len, config);
+                    offset = newOffset
                     tupleValue.push(element)
                 }
                 value = tupleValue as Value<T>
@@ -502,10 +514,10 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                         const type = structDefinition[field];
                         const {
                             value: fieldValue,
-                            offset: fieldOffset
-                        } = decode<unknown>(type, buffer, offset, config);
+                            offset: newOffset
+                        } = decode<unknown>(type, buffer, offset, len, config);
                         decodedObject[field] = fieldValue;
-                        offset = fieldOffset;
+                        offset = newOffset;
                     }
                 }
                 value = decodedObject as Value<T>
@@ -531,11 +543,11 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                 const indexedDefinition = indexed(enumDefinition);
                 let variantIndex
                 if (isVariantIntEncoding) {
-                    let result = decodeVariantInt(offset, view, u32)
-                    offset = result.offset;
+                    let result = decodeVariantInt(view, u32)
+                    offset += result.size;
                     variantIndex = Number(result.value);
                 } else {
-                    variantIndex = view.getUint32(offset, littleEndian);
+                    variantIndex = view.getUint32(0, littleEndian);
                     offset += 4;
                 }
                 if (indexedDefinition[variantIndex] == undefined) {
@@ -543,8 +555,8 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                 }
                 const [variantType, variant] = indexedDefinition[variantIndex];
                 if (variantType !== null) {
-                    const { value: variantValue, offset: variantOffset } = decode<unknown>(variantType, buffer, offset, config);
-                    offset = variantOffset;
+                    const { value: variantValue, offset: newOffset } = decode<unknown>(variantType, buffer, offset, len, config);
+                    offset = newOffset;
                     value = EnumVariantValue(variant, variantValue) as Value<T>
                 } else {
                     value = EnumVariantValue(variant) as Value<T>
@@ -554,7 +566,14 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
         case "option":
             {
                 const optionDefinition = type as OptionType;
-                const variantFlag = view.getUint8(offset);
+                // `view` is constructed at byteOffset=offset (see top of decode),
+                // so view-relative index 0 corresponds to buffer position `offset`.
+                // Passing `offset` here would read at `offset + offset`, which is
+                // either out-of-bounds or the wrong byte whenever this case is
+                // reached at non-zero offset (struct field, collection element,
+                // any nested context). Top-level Option tests didn't catch it
+                // because they always start at offset=0.
+                const variantFlag = view.getUint8(0);
                 offset += 1;
                 if (variantFlag === 0) {
                     return {
@@ -562,7 +581,7 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
                         offset
                     }
                 } else if (variantFlag === 1) {
-                    return decode<unknown>(optionDefinition.optionType, buffer, offset, config) as {
+                    return decode<unknown>(optionDefinition.optionType, buffer, offset, len, config) as {
                         value: Value<T>
                         offset: number
                     }
@@ -573,9 +592,9 @@ export const decode = <T>(type: T, buffer: ArrayBuffer, offset = 0, config: Binc
         case "custom":
             {
                 const customType = type as CustomType<unknown, string>;
-                const { value: customValue, offset: customOffset } = customType.decode(buffer, offset, config);
+                const { value: customValue, offset: customOffset } = customType.decode(buffer, offset, len, config);
                 value = customValue as Value<T>;
-                offset = customOffset;
+                offset += customOffset;
             }
             break
     }
@@ -627,12 +646,12 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
             dateView.setUint8(offset, Number(zigzagInt));
             return offset + 1;
         } else if (zigzagInt <= U16_MAX) {
-            dataView.setUint8(offset, U16_FLAG);
+            dateView.setUint8(offset, U16_FLAG);
             offset += 1;
             dataView.setUint16(offset, Number(zigzagInt), isLittleEndian);
             return offset + 2;
         } else if (zigzagInt <= U32_MAX) {
-            dataView.setUint8(offset, U32_FLAG);
+            dateView.setUint8(offset, U32_FLAG);
             offset += 1;
             dataView.setUint32(offset, Number(zigzagInt), isLittleEndian);
             return offset + 4;
@@ -706,9 +725,19 @@ export const encode = <T>(type: T, value: Value<T>, buffer: ArrayBuffer, offset:
             offset += 16;
             break
         }
-        // case "f16": {
-        //     throw new BincodeError('Unimplemented', 'f16 encoding is not implemented yet');
-        // }
+        case "f16": {
+            if (isVariantIntEncoding) {
+                const tempBuffer = new ArrayBuffer(2);
+                const tempView = new DataView(tempBuffer);
+                tempView.setFloat16(0, value as number, isLittleEndian);
+                const rawU16 = tempView.getUint16(0, isLittleEndian);
+                offset = variantIntEncoding(rawU16, dataView, offset, u16);
+            } else {
+                dataView.setFloat16(offset, value as number, isLittleEndian);
+                offset += 2;
+            }
+            break
+        }
         case "f32": {
             dataView.setFloat32(offset, value as number, isLittleEndian);
             offset += 4;
@@ -826,7 +855,7 @@ export abstract class CustomTypeClass<V, S extends string> implements CustomType
     readonly abstract type: S;
 
     abstract encode(buffer: ArrayBuffer, value: V, offset: number, config: BincodeConfig): number;
-    abstract decode(buffer: ArrayBuffer, offset: number, config: BincodeConfig): { value: V, offset: number };
+    abstract decode(buffer: ArrayBuffer, offset: number, len: number, config: BincodeConfig): { value: V, offset: number };
 }
 
 // test

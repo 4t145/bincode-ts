@@ -1,6 +1,6 @@
 import {
     u8, u32, String,
-    Tuple, Enum, Option, Result,
+    Tuple, Enum, Option, Result, Struct, Collection,
     encode, decode, _, $,
     Value,
 } from '../src/index';
@@ -52,6 +52,70 @@ describe('Enum Tests', () => {
         const noneSize = encode(NumberOption, null, buffer);
         const decodedNone = decode(NumberOption, buffer.slice(0, noneSize));
         expect(decodedNone.value).toEqual(null);
+    });
+
+    // Regression: the option decode case used to read the discriminant byte at
+    // `view.getUint8(offset)` instead of `view.getUint8(0)`. Since the view is
+    // already created at byteOffset=offset (see decode setup), passing `offset`
+    // again read at buffer position `offset + offset` — out of bounds for any
+    // option nested deep enough that the residual view shorter than the offset.
+    // Top-level Option tests above use offset=0 so the bug was invisible.
+    test('Option as a struct field (non-zero offset)', () => {
+        const WithOpt = Struct({
+            pad_a: u32,
+            pad_b: u32,
+            opt: Option(u8),
+        });
+        const buffer = new ArrayBuffer(32);
+        const value: Value<typeof WithOpt> = { pad_a: 100, pad_b: 200, opt: 99 };
+        const size = encode(WithOpt, value, buffer);
+        const decoded = decode(WithOpt, buffer.slice(0, size));
+        expect(decoded.value).toEqual(value);
+    });
+
+    test('Option as a struct field — None at non-zero offset', () => {
+        const WithOpt = Struct({
+            pad: u32,
+            opt: Option(u32),
+        });
+        const buffer = new ArrayBuffer(32);
+        const value: Value<typeof WithOpt> = { pad: 50, opt: null };
+        const size = encode(WithOpt, value, buffer);
+        const decoded = decode(WithOpt, buffer.slice(0, size));
+        expect(decoded.value).toEqual(value);
+    });
+
+    test('Option as collection element (non-zero offset on every element after first)', () => {
+        const OptList = Collection(Option(u32));
+        const buffer = new ArrayBuffer(64);
+        const value: Value<typeof OptList> = [10, null, 20, null, 30];
+        const size = encode(OptList, value, buffer);
+        const decoded = decode(OptList, buffer.slice(0, size));
+        expect(decoded.value).toEqual(value);
+    });
+
+    test('Option of nested struct as struct field', () => {
+        // `Value<typeof Outer>` triggers TS2589 (conditional-type recursion
+        // depth) on nested `Option<Struct>`. The roundtrip helper takes
+        // `unknown` to bypass the inference path while still exercising the
+        // encode/decode at runtime, which is the point of this regression.
+        const roundtrip = <T>(t: T, v: unknown, buf: ArrayBuffer): unknown => {
+            const size = encode(t, v as Parameters<typeof encode<T>>[1], buf);
+            return decode(t, buf.slice(0, size)).value;
+        };
+
+        const Inner = Struct({ a: u32, b: u32 });
+        const Outer = Struct({
+            pad: u32,
+            inner: Option(Inner),
+        });
+        const buffer = new ArrayBuffer(64);
+
+        const someValue = { pad: 1, inner: { a: 10, b: 20 } };
+        const noneValue = { pad: 1, inner: null };
+
+        expect(roundtrip(Outer, someValue, buffer)).toEqual(someValue);
+        expect(roundtrip(Outer, noneValue, buffer)).toEqual(noneValue);
     });
 
     test('Result type - Ok variant', () => {

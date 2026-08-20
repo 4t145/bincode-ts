@@ -6,15 +6,10 @@
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    }
-  },
   "files": [
     "dist",
+    "src",
+    "tsconfig.json",
     "README.md",
     "LICENSE"
   ],
@@ -41,7 +36,8 @@
     "examples:enums": "ts-node examples/enums.ts",
     "examples:complex": "ts-node examples/complex-structures.ts",
     "examples:custom": "ts-node examples/custom-types.ts",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test",
+    "prepare": "npm run build"
   },
   "keywords": [
     "typescript",
